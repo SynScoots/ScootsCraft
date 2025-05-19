@@ -1315,7 +1315,6 @@ ScootsCraft.cacheProfession = function()
                     ['owned'] = playerReagentCount,
                     ['link'] = GetTradeSkillReagentItemLink(skillIndex, reagentIndex)
                 }
-                reagent.id = select(2, ScootsCraft.extractId(reagent.link))
                 
                 craft.reagents[reagentIndex] = reagent
             end
