@@ -1,0 +1,30 @@
+tag v2.01
+be212beb1123f40858d8dcb52be2bf4fbe2592e0
+John Pasula <ackis@shaw.ca>
+2010-08-25 12:44:20 -0600
+
+Tagging as v2.01
+
+
+--------------------
+
+John Pasula:
+	- Add those mobs to the mob DB and localization stuffz.
+	- Add Indu'le Mystic and Warrior to Enchant Gloves - Angler
+	- Make CSV a bit more efficient and fix a dry-code bug with XML.  Will no doubt introduce more dry-code bugs.
+	- Add acquire to xml.
+	- Add flags to xml data
+	- Fix small bug (I think) with name text dump.  Removed erroneous new line.
+	- Add <recipe> flag and populate it
+	- Add xml header
+	- Start with xml export of recipe list
+James D. Callahan III:
+	- Removed Alexandra McQueen as a trainer from Wispcloak and Deathchill Cloak.
+	- Removed Raenah as a trainer from Wispcloak and Deathchill Cloak.
+	- Fixed version text in UI title bar.
+	- Code and comment re-formatting.
+mike:
+	- Cleaned up the toc and the documentation part of the arl interface options
+	- Fix "Glyph of Raise Dead" showing it was obtained from Northrend Inscription Research when it's really from Minor Inscription Research.
+	- Fix a minor typo in some of the custom strings
+	- turn off changelog

@@ -1,0 +1,8 @@
+## Interface: 30300
+## Title: Scoots Craft
+## Author: Scoots
+## Notes: A complete crafting overhaul with attunement support built-in
+## Version: 3.3.5
+## SavedVariables: SCOOTSCRAFT_OPTIONS
+
+ScootsCraft.lua
