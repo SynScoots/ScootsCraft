@@ -1,5 +1,3 @@
-# New Addon - ScootsCraft #
-
 ## Description ##
 
 This is a complete overhaul of the professions system designed to drastically improve the experience.
