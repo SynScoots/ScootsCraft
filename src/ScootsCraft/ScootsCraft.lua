@@ -1592,7 +1592,7 @@ ScootsCraft.updateDisplayedRecipes = function()
                     frame:SetScript('OnLeave', GameTooltip_Hide)
                 end
                 
-                if(recipe.detail.craftid == ScootsCraft.selectedCraft[ScootsCraft.activeProfession].craftid) then
+                if(ScootsCraft.selectedCraft[ScootsCraft.activeProfession] and recipe.detail.craftid == ScootsCraft.selectedCraft[ScootsCraft.activeProfession].craftid) then
                     frame.selected:SetAlpha(0.3)
                 end
                 
