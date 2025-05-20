@@ -104,6 +104,7 @@ end
 ScootsCraft.onLogout = function()
     if(ScootsCraft.optionsLoaded) then
         _G['SCOOTSCRAFT_OPTIONS'] = ScootsCraft.options
+        ScootsCraft.closeCraftPanel()
     end
 end
 
@@ -399,10 +400,21 @@ ScootsCraft.buildUiRecipes = function()
             if(recipeLine.isSectionHead ~= true) then
                 recipeLine.highlight:SetAlpha(1)
             end
+            
+            if(recipeLine.isSectionHead ~= true) then
+                if(ScootsCraft.getOption('recipe-tooltip') == 'item') then
+                    GameTooltip:SetOwner(recipeLine, 'ANCHOR_RIGHT')
+                    GameTooltip:SetTradeSkillItem(recipeLine.recipe.index)
+                elseif(ScootsCraft.getOption('recipe-tooltip') == 'recipe') then
+                    GameTooltip:SetOwner(recipeLine, 'ANCHOR_RIGHT')
+                    GameTooltip:SetHyperlink(recipeLine.recipe.tradelink)
+                end
+            end
         end)
         
         recipeLine:SetScript('OnLeave', function()
             recipeLine.highlight:SetAlpha(0)
+            GameTooltip_Hide(recipeLine)
         end)
         
         recipeLine:SetScript('OnClick', function()
@@ -1549,9 +1561,6 @@ ScootsCraft.updateDisplayedRecipes = function()
             frame:Show()
             frame.icon:SetAlpha(0)
             
-            frame:SetScript('OnEnter', nil)
-            frame:SetScript('OnLeave', nil)
-            
             if(recipe.type == 'section') then
                 frame.isSectionHead = true
                 frame.section = recipe.detail.index
@@ -1576,20 +1585,6 @@ ScootsCraft.updateDisplayedRecipes = function()
                 frame.underline:SetAlpha(0)
                 frame.selected:SetAlpha(0)
                 frame.sectionToggle:Hide()
-                
-                if(ScootsCraft.getOption('recipe-tooltip') == 'item') then
-                    frame:SetScript('OnEnter', function()
-                        GameTooltip:SetOwner(frame, 'ANCHOR_RIGHT')
-                        GameTooltip:SetTradeSkillItem(recipe.detail.index)
-                    end)
-                    frame:SetScript('OnLeave', GameTooltip_Hide)
-                elseif(ScootsCraft.getOption('recipe-tooltip') == 'recipe') then
-                    frame:SetScript('OnEnter', function()
-                        GameTooltip:SetOwner(frame, 'ANCHOR_RIGHT')
-                        GameTooltip:SetHyperlink(recipe.detail.tradelink)
-                    end)
-                    frame:SetScript('OnLeave', GameTooltip_Hide)
-                end
                 
                 if(ScootsCraft.selectedCraft[ScootsCraft.activeProfession] and recipe.detail.craftid == ScootsCraft.selectedCraft[ScootsCraft.activeProfession].craftid) then
                     frame.selected:SetAlpha(0.3)
@@ -1855,6 +1850,8 @@ ScootsCraft.eventHandler = function(self, event, arg1)
         ScootsCraft.onLoad()
     elseif(event == 'PLAYER_LOGOUT') then
         ScootsCraft.onLogout()
+    elseif(event == 'PLAYER_LEAVING_WORLD') then
+        ScootsCraft.closeCraftPanel()
     elseif(event == 'TRADE_SKILL_SHOW') then
         if(ScootsCraft.lockedActive) then
             ScootsCraft.openCraftPanel()
@@ -1879,3 +1876,4 @@ ScootsCraft.frames.events:RegisterEvent('PLAYER_LOGOUT')
 ScootsCraft.frames.events:RegisterEvent('TRADE_SKILL_SHOW')
 ScootsCraft.frames.events:RegisterEvent('TRADE_SKILL_UPDATE')
 ScootsCraft.frames.events:RegisterEvent('TRADE_SKILL_CLOSE')
+ScootsCraft.frames.events:RegisterEvent('PLAYER_LEAVING_WORLD')
