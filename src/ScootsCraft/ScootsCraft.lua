@@ -147,14 +147,17 @@ ScootsCraft.openCraftPanel = function()
     ScootsCraft.frames.master:ClearAllPoints()
     ScootsCraft.frames.master:SetPoint('TOPLEFT', UIParent, 'TOPLEFT', 0, -104)
     
-    ScootsCraft.renderProfession()
     ShowUIPanel(ScootsCraft.frames.master)
+    
+    ScootsCraft.masterPanelOpen = true
 end
 
 ScootsCraft.closeCraftPanel = function()
     if(ScootsCraft.uiBuilt) then
         HideUIPanel(ScootsCraft.frames.master)
     end
+    
+    ScootsCraft.masterPanelOpen = false
 end
 
 ScootsCraft.buildUi = function()
@@ -1265,19 +1268,16 @@ ScootsCraft.toggleAllSections = function()
 end
 
 ScootsCraft.extractId = function(link)
-    if(link == nil) then
-        return 'unknown', nil
-    end
-    
-    local subString = string.match(link, 'item:%d+')
-    
-    if(subString) then
-        return 'item', tonumber(string.match(subString, '%d+'))
-    end
-    
-    subString = string.match(link, 'enchant:%d+')
-    if(subString) then
-        return 'spell', tonumber(string.match(subString, '%d+'))
+    if(link) then
+        local subString = string.match(link, 'item:%d+')
+        if(subString) then
+            return 'item', tonumber(string.match(subString, '%d+'))
+        end
+        
+        subString = string.match(link, 'enchant:%d+')
+        if(subString) then
+            return 'spell', tonumber(string.match(subString, '%d+'))
+        end
     end
     
     return 'unknown', nil
@@ -1935,15 +1935,11 @@ ScootsCraft.eventHandler = function(self, event, arg1)
         ScootsCraft.onLogout()
     elseif(event == 'PLAYER_LEAVING_WORLD') then
         ScootsCraft.closeCraftPanel()
-    elseif(event == 'TRADE_SKILL_SHOW') then
-        if(ScootsCraft.lockedActive) then
-            ScootsCraft.openCraftPanel()
-        else
+    elseif(event == 'TRADE_SKILL_SHOW' or event == 'TRADE_SKILL_UPDATE') then
+        if(ScootsCraft.lockedActive ~= true) then
             ScootsCraft.addEnableButton()
-        end
-    elseif(event == 'TRADE_SKILL_UPDATE') then
-        if(ScootsCraft.lockedActive) then
-            ScootsCraft.renderProfession()
+        else
+            ScootsCraft.buildUpdate = true
         end
     elseif(event == 'TRADE_SKILL_CLOSE') then
         if(ScootsCraft.lockedActive) then
@@ -1952,7 +1948,18 @@ ScootsCraft.eventHandler = function(self, event, arg1)
     end
 end
 
+ScootsCraft.updateLoop = function()
+    if(ScootsCraft.buildUpdate) then
+        if(ScootsCraft.masterPanelOpen ~= true) then
+            ScootsCraft.openCraftPanel()
+        end
+        ScootsCraft.renderProfession()
+        ScootsCraft.buildUpdate = false
+    end
+end
+
 ScootsCraft.frames.events:SetScript('OnEvent', ScootsCraft.eventHandler)
+ScootsCraft.frames.events:SetScript('OnUpdate', ScootsCraft.updateLoop)
 
 ScootsCraft.frames.events:RegisterEvent('ADDON_LOADED')
 ScootsCraft.frames.events:RegisterEvent('PLAYER_LOGOUT')
