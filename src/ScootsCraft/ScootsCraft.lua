@@ -1,17 +1,17 @@
 ScootsCraft = {
     ['title'] = 'ScootsCraft',
     ['spellIds'] = {
-        51304, -- Alchemy
-        51300, -- Blacksmithing
-        51313, -- Enchanting
-        51306, -- Engineering
-        45363, -- Inscription
-        51311, -- Jewelcrafting
-        51302, -- Leatherworking
-        2656,  -- Smelting
-        51309, -- Tailoring
-        51296, -- Cooking
-        45542  -- First Aid
+        {51304, 28596, 11611, 3464,  3101,  2259},  -- Alchemy
+        {51300, 29844, 9785,  3538,  3100,  2018},  -- Blacksmithing
+        {51313, 28029, 13920, 7413,  7412,  7411},  -- Enchanting
+        {51306, 30350, 12656, 4038,  4037,  4036},  -- Engineering
+        {45363, 45361, 45360, 45359, 45358, 45357}, -- Inscription
+        {51311, 28897, 28895, 28894, 25230, 25229}, -- Jewelcrafting
+        {51302, 32549, 10662, 3811,  3104,  2108},  -- Leatherworking
+        {2656},                                     -- Smelting
+        {51309, 26790, 12180, 3910,  3909,  3908},  -- Tailoring
+        {51296, 33359, 18260, 3413,  3102,  2550},  -- Cooking
+        {45542, 27028, 10846, 7924,  3274,  3273}   -- First Aid
     },
     ['frames'] = {
         ['events'] = CreateFrame('Frame', 'ScootsCraft-EventsFrame', UIParent)
@@ -282,74 +282,51 @@ ScootsCraft.buildUiHeader = function()
     ScootsCraft.frames.professionButtonsHolder:SetFrameStrata(_G['TradeSkillFrame']:GetFrameStrata())
     
     ScootsCraft.professionSpells = {}
-    local prev = nil
-    for _, spellId in ipairs(ScootsCraft.spellIds) do
-        if(IsSpellKnown(spellId)) then
-            local name, _, icon = GetSpellInfo(spellId)
-            local spell = {
-                ['id'] = spellId,
-                ['name'] = name,
-                ['icon'] = icon,
-                ['button'] = CreateFrame('Button', 'ScootsCraft-ProfessionButton-' .. name, ScootsCraft.frames.professionButtonsHolder, 'SecureActionButtonTemplate')
-            }
-            
-            for i = 1, MAX_SPELLS do
-                bookSpellName = GetSpellName(i, BOOKTYPE_SPELL)
-                
-                if(bookSpellName == name) then
-                    spell.bookId = i
-                    break
-                end
-            end
+    for spellIndex, _ in ipairs(ScootsCraft.spellIds) do
+        local spell = {
+            ['id'] = nil,
+            ['bookId'] = nil,
+            ['name'] = nil,
+            ['icon'] = nil,
+            ['button'] = CreateFrame('Button', 'ScootsCraft-ProfessionButton-' .. spellIndex, ScootsCraft.frames.professionButtonsHolder, 'SecureActionButtonTemplate')
+        }
 
-            spell.button:SetSize(24, 24)
-            spell.button:SetFrameStrata(_G['TradeSkillFrame']:GetFrameStrata())
-            spell.button:SetAttribute('type', 'spell')
-            spell.button:SetAttribute('spell', spell.id)
-            spell.button:SetNormalTexture(icon)
-            spell.button:RegisterForClicks('AnyUp')
+        spell.button:SetSize(24, 24)
+        spell.button:SetFrameStrata(_G['TradeSkillFrame']:GetFrameStrata())
+        spell.button:SetAttribute('type', 'spell')
+        spell.button:RegisterForClicks('AnyUp')
+        spell.button:Hide()
+        
+        ScootsCraft.frames.professionButtonsHolder:SetHeight(spell.button:GetHeight())
+        
+        spell.button.glow = spell.button:CreateTexture(nil, 'OVERLAY')
+        spell.button.glow:SetTexture('Interface\\Buttons\\UI-ActionButton-Border')
+        spell.button.glow:SetBlendMode('ADD')
+        spell.button.glow:SetAlpha(0)
+        spell.button.glow:SetSize(42, 42)
+        spell.button.glow:SetPoint('CENTER', 0, 0)
+                
+        spell.button:SetScript('OnEnter', function()
+            GameTooltip_SetDefaultAnchor(GameTooltip, spell.button)
+            GameTooltip:SetSpell(spell.bookId, BOOKTYPE_SPELL)
+            GameTooltip:Show()
             
-            if(prev == nil) then
-                spell.button:SetPoint('TOPLEFT', ScootsCraft.frames.professionButtonsHolder, 'TOPLEFT', 0, 0)
-                ScootsCraft.frames.professionButtonsHolder:SetHeight(spell.button:GetHeight())
-            else
-                spell.button:SetPoint('TOPLEFT', prev, 'TOPRIGHT', 0, 0)
+            if((not ScootsCraft.activeProfession or spell.name ~= ScootsCraft.activeProfession) and (ScootsCraft.activeProfession ~= 'Mining' or spell.name ~= 'Smelting')) then
+                spell.button.glow:SetVertexColor(0.3, 0.3, 0.8)
+                spell.button.glow:SetAlpha(1)
             end
+        end)
+        
+        spell.button:SetScript('OnLeave', function()
+            GameTooltip:Hide()
             
-            ScootsCraft.frames.professionButtonsHolder:SetWidth(ScootsCraft.frames.professionButtonsHolder:GetWidth() + spell.button:GetWidth())
-            
-            spell.button.glow = spell.button:CreateTexture(nil, 'OVERLAY')
-            spell.button.glow:SetTexture('Interface\\Buttons\\UI-ActionButton-Border')
-            spell.button.glow:SetBlendMode('ADD')
-            spell.button.glow:SetAlpha(0)
-            spell.button.glow:SetSize(42, 42)
-            spell.button.glow:SetPoint('CENTER', 0, 0)
-            
-            spell.button:SetScript('OnEnter', function()
-                GameTooltip_SetDefaultAnchor(GameTooltip, spell.button)
-                GameTooltip:SetSpell(spell.bookId, BOOKTYPE_SPELL)
-                GameTooltip:Show()
-                
-                if((not ScootsCraft.activeProfession or spell.name ~= ScootsCraft.activeProfession) and (ScootsCraft.activeProfession ~= 'Mining' or spell.name ~= 'Smelting')) then
-                    spell.button.glow:SetVertexColor(0.3, 0.3, 0.8)
-                    spell.button.glow:SetAlpha(1)
-                end
-            end)
-            
-            spell.button:SetScript('OnLeave', function()
-                GameTooltip:Hide()
-                
-                if((not ScootsCraft.activeProfession or spell.name ~= ScootsCraft.activeProfession) and (ScootsCraft.activeProfession ~= 'Mining' or spell.name ~= 'Smelting')) then
-                    spell.button.glow:SetAlpha(0)
-                end
-            end)
-            
-            table.insert(ScootsCraft.professionSpells, spell)
-            prev = spell.button
-        end
+            if((not ScootsCraft.activeProfession or spell.name ~= ScootsCraft.activeProfession) and (ScootsCraft.activeProfession ~= 'Mining' or spell.name ~= 'Smelting')) then
+                spell.button.glow:SetAlpha(0)
+            end
+        end)
+        
+        ScootsCraft.professionSpells[spellIndex] = spell
     end
-    
-    ScootsCraft.frames.professionButtonsHolder:SetPoint('TOPLEFT', ScootsCraft.frames.front, 'TOPLEFT', (670 - ScootsCraft.frames.professionButtonsHolder:GetWidth()), -42)
 end
 
 ScootsCraft.buildUiRecipes = function()
@@ -1000,6 +977,47 @@ ScootsCraft.setAckisButton = function()
     end
 end
 
+ScootsCraft.setProfessionButtons = function()
+    local offsetMulti = 0
+    
+    for spellIndex, spellIdCollection in ipairs(ScootsCraft.spellIds) do
+        local spellId = nil
+        for _, checkSpellId in ipairs(spellIdCollection) do
+            if(IsSpellKnown(checkSpellId)) then
+                spellId = checkSpellId
+                break
+            end
+        end
+        
+        if(spellId) then
+            local name, _, icon = GetSpellInfo(spellId)
+            ScootsCraft.professionSpells[spellIndex].id = spellId
+            ScootsCraft.professionSpells[spellIndex].name = name
+            ScootsCraft.professionSpells[spellIndex].icon = icon
+            
+            for i = 1, MAX_SPELLS do
+                bookSpellName = GetSpellName(i, BOOKTYPE_SPELL)
+                
+                if(bookSpellName == name) then
+                    ScootsCraft.professionSpells[spellIndex].bookId = i
+                    break
+                end
+            end
+            
+            ScootsCraft.professionSpells[spellIndex].button:SetAttribute('spell', spellId)
+            ScootsCraft.professionSpells[spellIndex].button:SetNormalTexture(icon)
+            
+            ScootsCraft.professionSpells[spellIndex].button:SetPoint('TOPLEFT', ScootsCraft.frames.professionButtonsHolder, 'TOPLEFT', (ScootsCraft.professionSpells[spellIndex].button:GetWidth() * offsetMulti), 0)
+            ScootsCraft.professionSpells[spellIndex].button:Show()
+            
+            offsetMulti = offsetMulti + 1
+        end
+    end
+    
+    ScootsCraft.frames.professionButtonsHolder:SetWidth(ScootsCraft.professionSpells[1].button:GetWidth() * offsetMulti)
+    ScootsCraft.frames.professionButtonsHolder:SetPoint('TOPLEFT', ScootsCraft.frames.front, 'TOPLEFT', (670 - ScootsCraft.frames.professionButtonsHolder:GetWidth()), -42)
+end
+
 ScootsCraft.renderProfession = function()
     local professionName, currentSkill, maxSkill = GetTradeSkillLine()
     
@@ -1011,6 +1029,7 @@ ScootsCraft.renderProfession = function()
     ScootsCraft.activeProfession = professionName
     
     -- Make the active profession button glow
+    ScootsCraft.setProfessionButtons()
     for _, spell in pairs(ScootsCraft.professionSpells) do
         spell.button.glow:SetAlpha(0)
         spell.button:Enable()
@@ -1298,6 +1317,12 @@ ScootsCraft.cacheProfession = function()
             ScootsCraft.cachedCraftSections[sectionIndex] = skillName
             ScootsCraft.cachedCrafts[sectionIndex] = {}
         else
+            if(ScootsCraft.cachedCrafts[sectionIndex] == nil) then
+                sectionIndex = sectionIndex + 1
+                ScootsCraft.cachedCraftSections[sectionIndex] = 'Uncategorised'
+                ScootsCraft.cachedCrafts[sectionIndex] = {}
+            end
+        
             local minMade, maxMade = GetTradeSkillNumMade(skillIndex)
             
             local craft = {
