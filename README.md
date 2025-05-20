@@ -25,4 +25,4 @@ Download this repository, then extract the contents from the `src` directory int
 
 ## Screenshots ##
 
-![Screenshot of the interface](./img/ui.png)
+![Screenshot of the interface](./img/ui-2.png)
