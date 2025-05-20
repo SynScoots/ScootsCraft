@@ -652,19 +652,22 @@ ScootsCraft.buildUiFooter = function()
     
     ScootsCraft.frames.quantity:SetScript('OnTextChanged', function()
         local check = ScootsCraft.frames.quantity:GetNumber()
-        local maxQty = math.min(200, ScootsCraft.selectedCraft[ScootsCraft.activeProfession].number)
         
-        if(check ~= nil) then
-            if(check <= 1) then
-                ScootsCraft.frames.decrement:Disable()
-            else
-                ScootsCraft.frames.decrement:Enable()
-            end
+        if(ScootsCraft.selectedCraft[ScootsCraft.activeProfession] and check ~= 1) then
+            local maxQty = math.min(200, ScootsCraft.selectedCraft[ScootsCraft.activeProfession].number)
             
-            if(check >= maxQty) then
-                ScootsCraft.frames.increment:Disable()
-            else
-                ScootsCraft.frames.increment:Enable()
+            if(check ~= nil) then
+                if(check <= 1) then
+                    ScootsCraft.frames.decrement:Disable()
+                else
+                    ScootsCraft.frames.decrement:Enable()
+                end
+                
+                if(check >= maxQty) then
+                    ScootsCraft.frames.increment:Disable()
+                else
+                    ScootsCraft.frames.increment:Enable()
+                end
             end
         end
     end)
