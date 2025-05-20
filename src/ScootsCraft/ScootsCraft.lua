@@ -26,6 +26,7 @@ ScootsCraft = {
     ['scrollOffsets'] = {},
     ['defaultFilters'] = {
         ['available'] = false,
+        ['equipment-only'] = false,
         ['subclass'] = nil,
         ['search'] = nil,
         ['slot'] = nil,
@@ -47,7 +48,8 @@ ScootsCraft = {
             {2, '<= Warforged'},
             {3, '<= Lightforged'}
         }
-    }
+    },
+    ['cachedReagentCrafts'] = {}
 }
 
 ScootsCraft.onLoad = function()
@@ -553,6 +555,10 @@ ScootsCraft.buildUiCraft = function()
         end)
         
         ScootsCraft.frames.reagents[i]:SetScript('OnClick', function()
+            if(ScootsCraft.frames.reagents[i].itemId and not IsControlKeyDown() and not IsAltKeyDown() and not IsShiftKeyDown()) then
+                ScootsCraft.jumpToItemId(ScootsCraft.frames.reagents[i].itemId)
+            end
+            
             HandleModifiedItemClick(ScootsCraft.selectedCraft[ScootsCraft.activeProfession].reagents[i].link)
         end)
     end
@@ -724,11 +730,12 @@ ScootsCraft.buildUiFilters = function()
     ScootsCraft.frames.availableFilter:SetSize(24, 24)
     ScootsCraft.frames.availableFilter:SetPoint('TOPLEFT', ScootsCraft.frames.front, 'TOPLEFT', 70, -30)
     ScootsCraft.frames.availableFilter:SetFrameStrata(_G['TradeSkillFrame']:GetFrameStrata())
-    ScootsCraft.frames.availableFilter:SetHitRectInsets(0, -75, 0, 0)
     
     _G[ScootsCraft.frames.availableFilter:GetName() .. 'Text']:SetText('Have Materials')
     _G[ScootsCraft.frames.availableFilter:GetName() .. 'Text']:ClearAllPoints()
     _G[ScootsCraft.frames.availableFilter:GetName() .. 'Text']:SetPoint('TOPLEFT', ScootsCraft.frames.availableFilter, 'TOPRIGHT', -2, -5)
+    
+    ScootsCraft.frames.availableFilter:SetHitRectInsets(0, 0 - _G[ScootsCraft.frames.availableFilter:GetName() .. 'Text']:GetWidth(), 0, 0)
     
     ScootsCraft.frames.availableFilter:SetScript('OnClick', function()
         ScootsCraft.setFilter('available', ScootsCraft.frames.availableFilter:GetChecked())
@@ -740,6 +747,29 @@ ScootsCraft.buildUiFilters = function()
     end)
     
     ScootsCraft.frames.availableFilter:SetScript('OnLeave', GameTooltip_Hide)
+    
+    -- Filters: Equipment Only
+    ScootsCraft.frames.equipmentOnlyFilter = CreateFrame('CheckButton', 'ScootsCraft-Filters-EquipmentOnly', ScootsCraft.frames.front, 'UICheckButtonTemplate')
+    ScootsCraft.frames.equipmentOnlyFilter:SetSize(24, 24)
+    ScootsCraft.frames.equipmentOnlyFilter:SetPoint('LEFT', ScootsCraft.frames.availableFilter, 'RIGHT', 105, 0)
+    ScootsCraft.frames.equipmentOnlyFilter:SetFrameStrata(_G['TradeSkillFrame']:GetFrameStrata())
+    
+    _G[ScootsCraft.frames.equipmentOnlyFilter:GetName() .. 'Text']:SetText('Equipment Only')
+    _G[ScootsCraft.frames.equipmentOnlyFilter:GetName() .. 'Text']:ClearAllPoints()
+    _G[ScootsCraft.frames.equipmentOnlyFilter:GetName() .. 'Text']:SetPoint('TOPLEFT', ScootsCraft.frames.equipmentOnlyFilter, 'TOPRIGHT', -2, -5)
+    
+    ScootsCraft.frames.equipmentOnlyFilter:SetHitRectInsets(0, 0 - _G[ScootsCraft.frames.equipmentOnlyFilter:GetName() .. 'Text']:GetWidth(), 0, 0)
+    
+    ScootsCraft.frames.equipmentOnlyFilter:SetScript('OnClick', function()
+        ScootsCraft.setFilter('equipment-only', ScootsCraft.frames.equipmentOnlyFilter:GetChecked())
+    end)
+    
+    ScootsCraft.frames.equipmentOnlyFilter:SetScript('OnEnter', function()
+        GameTooltip:SetOwner(ScootsCraft.frames.equipmentOnlyFilter, 'ANCHOR_LEFT')
+        GameTooltip:SetText('Only show recipes that produce equippable items.', nil, nil, nil, nil, 1)
+    end)
+    
+    ScootsCraft.frames.equipmentOnlyFilter:SetScript('OnLeave', GameTooltip_Hide)
     
     -- Filters: Subclasses
     ScootsCraft.frames.subclassFilter = CreateFrame('Frame', 'ScootsCraft-Filters-Subclass', ScootsCraft.frames.front, 'UIDropDownMenuTemplate')
@@ -1028,6 +1058,9 @@ ScootsCraft.renderProfession = function()
     -- Available
     ScootsCraft.frames.availableFilter:SetChecked(ScootsCraft.filters[professionName].available)
     
+    -- Equipment Only
+    ScootsCraft.frames.equipmentOnlyFilter:SetChecked(ScootsCraft.filters[professionName]['equipment-only'])
+    
     -- Search
     if(ScootsCraft.filters[professionName].search) then
         ScootsCraft.frames.searchFilter:SetText(ScootsCraft.filters[professionName].search)
@@ -1229,7 +1262,12 @@ ScootsCraft.toggleAllSections = function()
 end
 
 ScootsCraft.extractId = function(link)
+    if(link == nil) then
+        return 'unknown', nil
+    end
+    
     local subString = string.match(link, 'item:%d+')
+    
     if(subString) then
         return 'item', tonumber(string.match(subString, '%d+'))
     end
@@ -1451,6 +1489,11 @@ ScootsCraft.filterCrafts = function()
             repeat
                 -- Filter: Have Materials
                 if(ScootsCraft.filters[ScootsCraft.activeProfession].available and craft.number < 1) then
+                    break
+                end
+                
+                -- Filter: Equipment Only
+                if(ScootsCraft.filters[ScootsCraft.activeProfession]['equipment-only'] and not craft.equippable) then
                     break
                 end
                 
@@ -1691,6 +1734,15 @@ ScootsCraft.selectRecipe = function(craft)
             SetItemButtonTexture(ScootsCraft.frames.reagents[i], reagent.icon)
             _G[ScootsCraft.frames.reagents[i]:GetName() .. 'Name']:SetText(reagent.name)
             
+            if(reagent.link) then
+                local _, reagentItemId = ScootsCraft.extractId(reagent.link)
+                if(reagentItemId) then
+                    ScootsCraft.frames.reagents[i].itemId = reagentItemId
+                end
+            else
+                ScootsCraft.frames.reagents[i].itemId = nil
+            end
+            
             if(reagent.required <= reagent.owned) then
                 SetItemButtonTextureVertexColor(ScootsCraft.frames.reagents[i], 1, 1, 1)
                 _G[ScootsCraft.frames.reagents[i]:GetName() .. 'Name']:SetTextColor(HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b)
@@ -1737,6 +1789,34 @@ ScootsCraft.selectRecipe = function(craft)
             end
         end
     end
+end
+
+ScootsCraft.jumpToItemId = function(itemId)
+    if(not ScootsCraft.cachedReagentCrafts[ScootsCraft.activeProfession]) then
+        ScootsCraft.cachedReagentCrafts[ScootsCraft.activeProfession] = {}
+    end
+    
+    if(ScootsCraft.cachedReagentCrafts[itemId] ~= nil) then
+        if(ScootsCraft.cachedReagentCrafts[itemId] ~= false) then
+            ScootsCraft.selectRecipe(ScootsCraft.cachedReagentCrafts[ScootsCraft.activeProfession][itemId])
+            ScootsCraft.updateDisplayedRecipes()
+        end
+        
+        return nil
+    end
+    
+    for _, crafts in pairs(ScootsCraft.cachedCrafts) do
+        for _, craft in pairs(crafts) do
+            if(craft.crafttype == 'item' and craft.id == itemId) then
+                ScootsCraft.cachedReagentCrafts[ScootsCraft.activeProfession][itemId] = craft
+                ScootsCraft.selectRecipe(craft)
+                ScootsCraft.updateDisplayedRecipes()
+                return nil
+            end
+        end
+    end
+    
+    ScootsCraft.cachedReagentCrafts[ScootsCraft.activeProfession][itemId] = false
 end
 
 ScootsCraft.setFilter = function(key, value)

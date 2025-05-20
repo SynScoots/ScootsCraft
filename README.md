@@ -10,6 +10,8 @@ Features:
 * All Blizzard interface actions should be faithfully restored.
 * Additional filter for attuneable equipment (Unfiltered, attuneable (account), or attuneable (character)).
 * Additional filter for attuned forge level.
+* Additional filter to only show equipment.
+* Clicking on a reagent will show the craft for that reagent if it is from the same profession.
 
 ## Usage ##
 
