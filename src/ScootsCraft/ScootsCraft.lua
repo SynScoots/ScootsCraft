@@ -1,18 +1,5 @@
 ScootsCraft = {
     ['title'] = 'ScootsCraft',
-    ['spellIds'] = {
-        {51304, 28596, 11611, 3464,  3101,  2259},  -- Alchemy
-        {51300, 29844, 9785,  3538,  3100,  2018},  -- Blacksmithing
-        {51313, 28029, 13920, 7413,  7412,  7411},  -- Enchanting
-        {51306, 30350, 12656, 4038,  4037,  4036},  -- Engineering
-        {45363, 45361, 45360, 45359, 45358, 45357}, -- Inscription
-        {51311, 28897, 28895, 28894, 25230, 25229}, -- Jewelcrafting
-        {51302, 32549, 10662, 3811,  3104,  2108},  -- Leatherworking
-        {2656},                                     -- Smelting
-        {51309, 26790, 12180, 3910,  3909,  3908},  -- Tailoring
-        {51296, 33359, 18260, 3413,  3102,  2550},  -- Cooking
-        {45542, 27028, 10846, 7924,  3274,  3273}   -- First Aid
-    },
     ['frames'] = {
         ['events'] = CreateFrame('Frame', 'ScootsCraft-EventsFrame', UIParent)
     },
@@ -49,7 +36,22 @@ ScootsCraft = {
             {3, '<= Lightforged'}
         }
     },
-    ['cachedReagentCrafts'] = {}
+    ['cachedReagentCrafts'] = {},
+    ['runeforging'] = 53428
+}
+ScootsCraft.spellIds = {
+    {ScootsCraft.runeforging},                  -- Runeforging
+    {51304, 28596, 11611, 3464,  3101,  2259},  -- Alchemy
+    {51300, 29844, 9785,  3538,  3100,  2018},  -- Blacksmithing
+    {51313, 28029, 13920, 7413,  7412,  7411},  -- Enchanting
+    {51306, 30350, 12656, 4038,  4037,  4036},  -- Engineering
+    {45363, 45361, 45360, 45359, 45358, 45357}, -- Inscription
+    {51311, 28897, 28895, 28894, 25230, 25229}, -- Jewelcrafting
+    {51302, 32549, 10662, 3811,  3104,  2108},  -- Leatherworking
+    {2656},                                     -- Smelting
+    {51309, 26790, 12180, 3910,  3909,  3908},  -- Tailoring
+    {51296, 33359, 18260, 3413,  3102,  2550},  -- Cooking
+    {45542, 27028, 10846, 7924,  3274,  3273}   -- First Aid
 }
 
 ScootsCraft.onLoad = function()
@@ -1027,6 +1029,7 @@ ScootsCraft.renderProfession = function()
     end
     
     ScootsCraft.activeProfession = professionName
+    ScootsCraft.activeProfessionName = professionName
     
     -- Make the active profession button glow
     ScootsCraft.setProfessionButtons()
@@ -1039,6 +1042,7 @@ ScootsCraft.renderProfession = function()
             spell.button.glow:SetAlpha(1)
             spell.button:Disable()
             
+            ScootsCraft.activeProfession = spell.id
             SetPortraitToTexture(ScootsCraft.frames.master.icon, spell.icon)
         end
     end
@@ -1053,10 +1057,10 @@ ScootsCraft.renderProfession = function()
     end
     
     -- Bring collapsed sections/scroll position from last time we were on this profession
-    if(ScootsCraft.hiddenSections[professionName] == nil) then
-        ScootsCraft.hiddenSections[professionName] = {}
+    if(ScootsCraft.hiddenSections[ScootsCraft.activeProfession] == nil) then
+        ScootsCraft.hiddenSections[ScootsCraft.activeProfession] = {}
     end
-    
+        
     if(ScootsCraft.scrollOffsets[ScootsCraft.activeProfession] ~= nil) then
         FauxScrollFrame_SetOffset(ScootsCraft.frames.recipeFrame, ScootsCraft.scrollOffsets[ScootsCraft.activeProfession])
         ScootsCraft.frames.recipeFrame:SetVerticalScroll(ScootsCraft.scrollOffsets[ScootsCraft.activeProfession] * ScootsCraft.recipeLineHeight)
@@ -1064,41 +1068,36 @@ ScootsCraft.renderProfession = function()
         FauxScrollFrame_SetOffset(ScootsCraft.frames.recipeFrame, 0)
         ScootsCraft.frames.recipeFrame:SetVerticalScroll(0)
     end
-    
-    -- Set title up
-    ScootsCraft.frames.title.text:SetText(ScootsCraft.title .. ' - ' .. professionName .. ' [' .. tostring(currentSkill) .. ' / ' .. tostring(maxSkill) .. ']')
-    ScootsCraft.skillLevels[professionName] = {currentSkill, maxSkill}
-    ScootsCraft.frames.professionLink:SetPoint('LEFT', ScootsCraft.frames.title.text, 'RIGHT', 20, 0)
-    
-    -- Prepare profession
-    ScootsCraft.cacheProfession()
-    
+        
     -- Setup filters
     UIDropDownMenu_Initialize(ScootsCraft.frames.subclassFilter, ScootsCraft.setSubclassFilterValues)
     UIDropDownMenu_Initialize(ScootsCraft.frames.slotFilter, ScootsCraft.setSlotFilterValues)
     UIDropDownMenu_Initialize(ScootsCraft.frames.equipmentFilter, ScootsCraft.setEquipmentFilterValues)
     UIDropDownMenu_Initialize(ScootsCraft.frames.forgeFilter, ScootsCraft.setForgeFilterValues)
     
+    -- Set title up
+    ScootsCraft.frames.title.text:SetText(ScootsCraft.title .. ' - ' .. professionName .. ' [' .. tostring(currentSkill) .. ' / ' .. tostring(maxSkill) .. ']')
+    ScootsCraft.skillLevels[ScootsCraft.activeProfession] = {currentSkill, maxSkill}
+    ScootsCraft.frames.professionLink:SetPoint('LEFT', ScootsCraft.frames.title.text, 'RIGHT', 20, 0)
+    
+    -- Prepare profession
+    ScootsCraft.cacheProfession()
+
     -- Apply filters from last time we viewed this profession
     -- Available
-    ScootsCraft.frames.availableFilter:SetChecked(ScootsCraft.filters[professionName].available)
+    ScootsCraft.frames.availableFilter:SetChecked(ScootsCraft.filters[ScootsCraft.activeProfession].available)
+    ScootsCraft.frames.availableFilter:Show()
     
     -- Equipment Only
-    ScootsCraft.frames.equipmentOnlyFilter:SetChecked(ScootsCraft.filters[professionName]['equipment-only'])
-    
-    -- Search
-    if(ScootsCraft.filters[professionName].search) then
-        ScootsCraft.frames.searchFilter:SetText(ScootsCraft.filters[professionName].search)
-    else
-        ScootsCraft.frames.searchFilter:SetText('')
-    end
+    ScootsCraft.frames.equipmentOnlyFilter:SetChecked(ScootsCraft.filters[ScootsCraft.activeProfession]['equipment-only'])
+    ScootsCraft.frames.equipmentOnlyFilter:Show()
     
     -- Subclass
-    if(ScootsCraft.filters[professionName].subclass) then
+    if(ScootsCraft.filters[ScootsCraft.activeProfession].subclass) then
         local index = 1
         for sectionIndex, sectionName in ipairs(ScootsCraft.cachedCraftSections) do
             index = index + 1
-            if(ScootsCraft.filters[professionName].subclass == sectionIndex) then
+            if(ScootsCraft.filters[ScootsCraft.activeProfession].subclass == sectionIndex) then
                 UIDropDownMenu_SetSelectedValue(ScootsCraft.frames.subclassFilter, index)
                 UIDropDownMenu_SetText(ScootsCraft.frames.subclassFilter, sectionName)
                 break
@@ -1108,13 +1107,14 @@ ScootsCraft.renderProfession = function()
         UIDropDownMenu_SetSelectedValue(ScootsCraft.frames.subclassFilter, 1)
         UIDropDownMenu_SetText(ScootsCraft.frames.subclassFilter, 'All Subclasses')
     end
+    ScootsCraft.frames.subclassFilter:Show()
     
     -- Slot
-    if(ScootsCraft.filters[professionName].slot) then
+    if(ScootsCraft.filters[ScootsCraft.activeProfession].slot) then
         local index = 1
         for slotName, _ in ipairs(ScootsCraft.cachedEquipmentSlots) do
             index = index + 1
-            if(ScootsCraft.filters[professionName].slot == slotName) then
+            if(ScootsCraft.filters[ScootsCraft.activeProfession].slot == slotName) then
                 UIDropDownMenu_SetSelectedValue(ScootsCraft.frames.slotFilter, index)
                 UIDropDownMenu_SetText(ScootsCraft.frames.slotFilter, sectionName)
                 break
@@ -1124,28 +1124,38 @@ ScootsCraft.renderProfession = function()
         UIDropDownMenu_SetSelectedValue(ScootsCraft.frames.slotFilter, 1)
         UIDropDownMenu_SetText(ScootsCraft.frames.slotFilter, 'All Slots')
     end
+    ScootsCraft.frames.slotFilter:Show()
+    
+    -- Search
+    if(ScootsCraft.filters[ScootsCraft.activeProfession].search) then
+        ScootsCraft.frames.searchFilter:SetText(ScootsCraft.filters[professionName].search)
+    else
+        ScootsCraft.frames.searchFilter:SetText('')
+    end
     
     -- Equipment
     local index = 0
     for _, choice in ipairs(ScootsCraft.filterChoices.equipment) do
         index = index + 1
-        if(ScootsCraft.filters[professionName].equipment == choice[1]) then
+        if(ScootsCraft.filters[ScootsCraft.activeProfession].equipment == choice[1]) then
             UIDropDownMenu_SetSelectedValue(ScootsCraft.frames.equipmentFilter, index)
             UIDropDownMenu_SetText(ScootsCraft.frames.equipmentFilter, choice[2])
             break
         end
     end
+    ScootsCraft.frames.equipmentFilter:Show()
     
     -- Forge
     local index = 0
     for _, choice in ipairs(ScootsCraft.filterChoices.forge) do
         index = index + 1
-        if(ScootsCraft.filters[professionName].forge == choice[1]) then
+        if(ScootsCraft.filters[ScootsCraft.activeProfession].forge == choice[1]) then
             UIDropDownMenu_SetSelectedValue(ScootsCraft.frames.forgeFilter, index)
             UIDropDownMenu_SetText(ScootsCraft.frames.forgeFilter, choice[2])
             break
         end
     end
+    ScootsCraft.frames.forgeFilter:Show()
     
     -- Hide options if they're open
     if(ScootsCraft.frames.options and ScootsCraft.frames.options:IsVisible()) then
@@ -1515,32 +1525,16 @@ ScootsCraft.filterCrafts = function()
     
         for _, craft in ipairs(crafts) do
             repeat
-                -- Filter: Have Materials
-                if(ScootsCraft.filters[ScootsCraft.activeProfession].available and craft.number < 1) then
-                    break
+                if(ScootsCraft.activeProfession ~= ScootsCraft.runeforging) then
+                    -- Filter: Have Materials
+                    if(ScootsCraft.filters[ScootsCraft.activeProfession].available and craft.number < 1) then
+                        break
+                    end
                 end
-                
+                    
                 -- Filter: Equipment Only
                 if(ScootsCraft.filters[ScootsCraft.activeProfession]['equipment-only'] and not craft.equippable) then
                     break
-                end
-                
-                -- Filter: Search
-                if(ScootsCraft.filters[ScootsCraft.activeProfession].search) then
-                    if(not string.match(string.lower(craft.name), string.lower(ScootsCraft.filters[ScootsCraft.activeProfession].search))) then
-                        local hasMatch = false
-                        
-                        for _, reagent in pairs(craft.reagents) do
-                            if(string.match(string.lower(reagent.name), string.lower(ScootsCraft.filters[ScootsCraft.activeProfession].search))) then
-                                hasMatch = true
-                                break
-                            end
-                        end
-                        
-                        if(hasMatch ~= true) then
-                            break
-                        end
-                    end
                 end
                 
                 -- Filter: Subclass
@@ -1574,6 +1568,24 @@ ScootsCraft.filterCrafts = function()
                 if(ScootsCraft.filters[ScootsCraft.activeProfession].forge) then
                     if(craft.forge and craft.forge > ScootsCraft.filters[ScootsCraft.activeProfession].forge) then
                         break
+                    end
+                end
+                
+                -- Filter: Search
+                if(ScootsCraft.filters[ScootsCraft.activeProfession].search) then
+                    if(not string.match(string.lower(craft.name), string.lower(ScootsCraft.filters[ScootsCraft.activeProfession].search))) then
+                        local hasMatch = false
+                        
+                        for _, reagent in pairs(craft.reagents) do
+                            if(string.match(string.lower(reagent.name), string.lower(ScootsCraft.filters[ScootsCraft.activeProfession].search))) then
+                                hasMatch = true
+                                break
+                            end
+                        end
+                        
+                        if(hasMatch ~= true) then
+                            break
+                        end
                     end
                 end
                 
@@ -1800,7 +1812,7 @@ ScootsCraft.selectRecipe = function(craft)
     ScootsCraft.frames.decrement:Hide()
     ScootsCraft.frames.createAllButton:Hide()
     
-    if(craft.number > 0) then
+    if(craft.number > 0 or ScootsCraft.activeProfession == ScootsCraft.runeforging) then
         ScootsCraft.frames.createButton:Enable()
         ScootsCraft.frames.quantity:SetText('1')
         
