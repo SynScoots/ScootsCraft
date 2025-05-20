@@ -241,7 +241,9 @@ function private.InitializeFrame()
 
 			self:ClearAllPoints()
 
-			if opts.anchorTo == "" then	-- no values yet, clamp to whatever frame is appropriate
+			if(IsAddOnLoaded('ScootsCraft') and ScootsCraft.frames.master) then
+                self:SetPoint('TOPLEFT', ScootsCraft.frames.master, 'TOPRIGHT', 10, 0)
+            elseif opts.anchorTo == "" then	-- no values yet, clamp to whatever frame is appropriate
 				if _G.ATSWFrame then
 					self:SetPoint("CENTER", _G.ATSWFrame, "CENTER", 490, 0)
 				elseif _G.CauldronFrame then
