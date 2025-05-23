@@ -537,11 +537,11 @@ ScootsCraft.buildUiCraft = function()
         end)
         
         ScootsCraft.frames.reagents[i]:SetScript('OnClick', function()
+            HandleModifiedItemClick(ScootsCraft.selectedCraft[ScootsCraft.activeProfession].reagents[i].link)
+            
             if(ScootsCraft.frames.reagents[i].itemId and not IsControlKeyDown() and not IsAltKeyDown() and not IsShiftKeyDown()) then
                 ScootsCraft.jumpToItemId(ScootsCraft.frames.reagents[i].itemId)
             end
-            
-            HandleModifiedItemClick(ScootsCraft.selectedCraft[ScootsCraft.activeProfession].reagents[i].link)
         end)
     end
 end
