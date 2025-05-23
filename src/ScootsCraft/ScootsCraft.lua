@@ -29,7 +29,7 @@ ScootsCraft = {
         },
         ['forge'] = {
             {nil, 'All Forge Levels'},
-            {-1, '<= Unattuned'},
+            {-1, 'Unattuned'},
             {0, '<= Baseline'},
             {1, '<= Titanforged'},
             {2, '<= Warforged'},
@@ -75,7 +75,8 @@ ScootsCraft.loadOptions = function()
     ScootsCraft.options = {
         ['active'] = true,
         ['recipe-tooltip'] = nil,
-        ['draggable'] = false
+        ['draggable'] = false,
+        ['remember-filters'] = false
     }
     
     if(ScootsCraft.addonLoaded and _G['SCOOTSCRAFT_OPTIONS'] ~= nil) then
@@ -147,6 +148,13 @@ end
 ScootsCraft.openCraftPanel = function()
     ScootsCraft.buildUi()
     ScootsCraft.setAckisButton()
+    
+    if(ScootsCraft.getOption('remember-filters') and not ScootsCraft.restoredRememberedFilters) then
+        ScootsCraft.restoredRememberedFilters = true
+        if(ScootsCraft.getOption('remembered-filter-data')) then
+            ScootsCraft.filters = ScootsCraft.getOption('remembered-filter-data')
+        end
+    end
     
     ScootsCraft.frames.master:ClearAllPoints()
     ScootsCraft.frames.master:SetPoint('TOPLEFT', UIParent, 'TOPLEFT', 0, -104)
@@ -797,9 +805,15 @@ ScootsCraft.buildUiFilters = function()
     ScootsCraft.frames.searchFilter.label:SetJustifyH('LEFT')
     ScootsCraft.frames.searchFilter.label:SetText('Search')
     
-    ScootsCraft.frames.searchFilter:SetScript('OnEnterPressed', EditBox_ClearFocus)
-    ScootsCraft.frames.searchFilter:SetScript('OnEscapePressed', EditBox_ClearFocus)
+    local clearFocus = function(self)
+        ScootsCraft.searchFilterFocussed = nil
+        EditBox_ClearFocus(self)
+    end
+    
+    ScootsCraft.frames.searchFilter:SetScript('OnEnterPressed', clearFocus)
+    ScootsCraft.frames.searchFilter:SetScript('OnEscapePressed', clearFocus)
     ScootsCraft.frames.searchFilter:SetScript('OnEditFocusGained', function()
+        ScootsCraft.searchFilterFocussed = true
         ScootsCraft.frames.searchFilter.label:Hide()
         EditBox_HighlightText(ScootsCraft.frames.searchFilter)
     end)
@@ -971,11 +985,48 @@ ScootsCraft.buildUiOptions = function()
         ScootsCraft.updateDisplayedRecipes()
     end)
     
+    -- Option: Remember filters
+    -- Header
+    ScootsCraft.frames.options.rememberFiltersHeader = ScootsCraft.frames.options:CreateFontString(nil, 'ARTWORK')
+    ScootsCraft.frames.options.rememberFiltersHeader:SetFontObject('GameFontNormal')
+    ScootsCraft.frames.options.rememberFiltersHeader:SetPoint('TOPLEFT', ScootsCraft.frames.optionDraggable, 'BOTTOMLEFT', 0, -10)
+    ScootsCraft.frames.options.rememberFiltersHeader:SetJustifyH('LEFT')
+    ScootsCraft.frames.options.rememberFiltersHeader:SetText('Remember filters')
+    
+    -- Checkbox
+    ScootsCraft.frames.optionRememberFilters = CreateFrame('CheckButton', 'ScootsCraft-Option-RememberFilters', ScootsCraft.frames.options, 'UICheckButtonTemplate')
+    ScootsCraft.frames.optionRememberFilters:SetSize(24, 24)
+    ScootsCraft.frames.optionRememberFilters:SetPoint('TOPLEFT', ScootsCraft.frames.options.rememberFiltersHeader, 'BOTTOMLEFT', 0, -4)
+    ScootsCraft.frames.optionRememberFilters:SetFrameStrata(ScootsCraft.frames.master:GetFrameStrata())
+    
+    ScootsCraft.frames.optionRememberFilters:SetScript('OnEnter', function()
+        GameTooltip:SetOwner(ScootsCraft.frames.optionRememberFilters, 'ANCHOR_RIGHT')
+        GameTooltip:SetText('Remember filters', HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b)
+        GameTooltip:AddLine('When enabled, your filters for each profession will be remembered between game sessions.', nil, nil, nil, true)
+        GameTooltip:Show()
+    end)
+    
+    ScootsCraft.frames.optionRememberFilters:SetScript('OnLeave', GameTooltip_Hide)
+    
+    if(ScootsCraft.getOption('remember-filters')) then
+        ScootsCraft.frames.optionRememberFilters:SetChecked(true)
+    end
+    
+    _G[ScootsCraft.frames.optionRememberFilters:GetName() .. 'Text']:SetText('Remember')
+    _G[ScootsCraft.frames.optionRememberFilters:GetName() .. 'Text']:ClearAllPoints()
+    _G[ScootsCraft.frames.optionRememberFilters:GetName() .. 'Text']:SetPoint('TOPLEFT', ScootsCraft.frames.optionRememberFilters, 'TOPRIGHT', -2, -5)
+    
+    ScootsCraft.frames.optionRememberFilters:SetHitRectInsets(0, 0 - _G[ScootsCraft.frames.optionRememberFilters:GetName() .. 'Text']:GetWidth(), 0, 0)
+    
+    ScootsCraft.frames.optionRememberFilters:SetScript('OnClick', function()
+        ScootsCraft.setOption('remember-filters', ScootsCraft.frames.optionRememberFilters:GetChecked())
+    end)
+    
     -- Option: Use default frames
     -- Header
     ScootsCraft.frames.options.defaultFramesHeader = ScootsCraft.frames.options:CreateFontString(nil, 'ARTWORK')
     ScootsCraft.frames.options.defaultFramesHeader:SetFontObject('GameFontNormal')
-    ScootsCraft.frames.options.defaultFramesHeader:SetPoint('TOPLEFT', ScootsCraft.frames.optionDraggable, 'BOTTOMLEFT', 0, -10)
+    ScootsCraft.frames.options.defaultFramesHeader:SetPoint('TOPLEFT', ScootsCraft.frames.optionRememberFilters, 'BOTTOMLEFT', 0, -10)
     ScootsCraft.frames.options.defaultFramesHeader:SetJustifyH('LEFT')
     ScootsCraft.frames.options.defaultFramesHeader:SetText('Use default profession frames')
     
@@ -1175,6 +1226,12 @@ ScootsCraft.renderProfession = function()
         ScootsCraft.frames.searchFilter:SetText(ScootsCraft.filters[ScootsCraft.activeProfession].search)
     else
         ScootsCraft.frames.searchFilter:SetText('')
+    end
+    
+    if(ScootsCraft.frames.searchFilter:GetText() == '' and not ScootsCraft.searchFilterFocussed) then
+        ScootsCraft.frames.searchFilter.label:Show()
+    else
+        ScootsCraft.frames.searchFilter.label:Hide()
     end
     
     -- Equipment
@@ -1909,6 +1966,7 @@ ScootsCraft.setFilter = function(key, value)
     end
     
     ScootsCraft.filters[ScootsCraft.activeProfession][key] = value
+    ScootsCraft.setOption('remembered-filter-data', ScootsCraft.filters)
     ScootsCraft.filterCrafts()
     ScootsCraft.updateDisplayedRecipes()
 end
