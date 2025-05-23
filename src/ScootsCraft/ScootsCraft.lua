@@ -73,7 +73,9 @@ ScootsCraft.loadOptions = function()
     end
     
     ScootsCraft.options = {
-        ['active'] = true
+        ['active'] = true,
+        ['recipe-tooltip'] = nil,
+        ['draggable'] = false
     }
     
     if(ScootsCraft.addonLoaded and _G['SCOOTSCRAFT_OPTIONS'] ~= nil) then
@@ -231,7 +233,9 @@ ScootsCraft.buildUiHeader = function()
     -- Title
     ScootsCraft.frames.title = CreateFrame('Frame', 'ScootsCraft-TitleFrame', ScootsCraft.frames.front)
     ScootsCraft.frames.title:SetPoint('TOPLEFT', ScootsCraft.frames.front, 'TOPLEFT', 74, -16)
-    ScootsCraft.frames.title:SetSize(440, 16)
+    ScootsCraft.frames.title:SetSize(520, 16)
+    ScootsCraft.frames.title:EnableMouse(true)
+    ScootsCraft.frames.title:RegisterForDrag('LeftButton')
     
     ScootsCraft.frames.title.text = ScootsCraft.frames.title:CreateFontString(nil, 'ARTWORK')
     ScootsCraft.frames.title.text:SetFont('Fonts\\FRIZQT__.TTF', 12)
@@ -239,6 +243,17 @@ ScootsCraft.buildUiHeader = function()
     ScootsCraft.frames.title.text:SetJustifyH('LEFT')
     ScootsCraft.frames.title.text:SetTextColor(1, 1, 1)
     
+    ScootsCraft.frames.title:SetScript('OnDragStart', function()
+        if(ScootsCraft.getOption('draggable')) then
+            ScootsCraft.frames.master:StartMoving()
+        end
+    end)
+    
+    ScootsCraft.frames.title:SetScript('OnDragStop', function()
+        ScootsCraft.frames.master:StopMovingOrSizing()
+    end)
+    
+    -- Profession link
     ScootsCraft.frames.professionLink = CreateFrame('Button', 'ScootsCraft-professionLinkButton', ScootsCraft.frames.title)
     ScootsCraft.frames.professionLink:SetSize(32, 16)
     ScootsCraft.frames.professionLink:SetFrameStrata(_G['TradeSkillFrame']:GetFrameStrata())
@@ -850,7 +865,6 @@ ScootsCraft.buildUiOptions = function()
     -- Option: Recipe tooltip
     -- Header
     ScootsCraft.frames.options.recipeTooltipHeader = ScootsCraft.frames.options:CreateFontString(nil, 'ARTWORK')
-    ScootsCraft.frames.options.recipeTooltipHeader:SetWidth(ScootsCraft.frames.craftItem:GetWidth() - (ScootsCraft.frames.craftIcon:GetWidth() + 10))
     ScootsCraft.frames.options.recipeTooltipHeader:SetFontObject('GameFontNormal')
     ScootsCraft.frames.options.recipeTooltipHeader:SetPoint('TOPLEFT', 10, -10)
     ScootsCraft.frames.options.recipeTooltipHeader:SetJustifyH('LEFT')
@@ -928,14 +942,42 @@ ScootsCraft.buildUiOptions = function()
         ScootsCraft.updateDisplayedRecipes()
     end)
     
+    -- Option: Draggable
+    -- Header
+    ScootsCraft.frames.options.draggableHeader = ScootsCraft.frames.options:CreateFontString(nil, 'ARTWORK')
+    ScootsCraft.frames.options.draggableHeader:SetFontObject('GameFontNormal')
+    ScootsCraft.frames.options.draggableHeader:SetPoint('TOPLEFT', ScootsCraft.frames.optionRecipeTooltipNone, 'BOTTOMLEFT', 0, -10)
+    ScootsCraft.frames.options.draggableHeader:SetJustifyH('LEFT')
+    ScootsCraft.frames.options.draggableHeader:SetText('Click header to drag window')
+    
+    -- Checkbox
+    ScootsCraft.frames.optionDraggable = CreateFrame('CheckButton', 'ScootsCraft-Option-Draggable', ScootsCraft.frames.options, 'UICheckButtonTemplate')
+    ScootsCraft.frames.optionDraggable:SetSize(24, 24)
+    ScootsCraft.frames.optionDraggable:SetPoint('TOPLEFT', ScootsCraft.frames.options.draggableHeader, 'BOTTOMLEFT', 0, -4)
+    ScootsCraft.frames.optionDraggable:SetFrameStrata(ScootsCraft.frames.master:GetFrameStrata())
+    
+    if(ScootsCraft.getOption('draggable')) then
+        ScootsCraft.frames.optionDraggable:SetChecked(true)
+    end
+    
+    _G[ScootsCraft.frames.optionDraggable:GetName() .. 'Text']:SetText('Make window draggable')
+    _G[ScootsCraft.frames.optionDraggable:GetName() .. 'Text']:ClearAllPoints()
+    _G[ScootsCraft.frames.optionDraggable:GetName() .. 'Text']:SetPoint('TOPLEFT', ScootsCraft.frames.optionDraggable, 'TOPRIGHT', -2, -5)
+    
+    ScootsCraft.frames.optionDraggable:SetHitRectInsets(0, 0 - _G[ScootsCraft.frames.optionDraggable:GetName() .. 'Text']:GetWidth(), 0, 0)
+    
+    ScootsCraft.frames.optionDraggable:SetScript('OnClick', function()
+        ScootsCraft.setOption('draggable', ScootsCraft.frames.optionDraggable:GetChecked())
+        ScootsCraft.updateDisplayedRecipes()
+    end)
+    
     -- Option: Use default frames
     -- Header
     ScootsCraft.frames.options.defaultFramesHeader = ScootsCraft.frames.options:CreateFontString(nil, 'ARTWORK')
-    ScootsCraft.frames.options.defaultFramesHeader:SetWidth(ScootsCraft.frames.craftItem:GetWidth() - (ScootsCraft.frames.craftIcon:GetWidth() + 10))
     ScootsCraft.frames.options.defaultFramesHeader:SetFontObject('GameFontNormal')
-    ScootsCraft.frames.options.defaultFramesHeader:SetPoint('TOPLEFT', ScootsCraft.frames.optionRecipeTooltipNone, 'BOTTOMLEFT', 0, -10)
+    ScootsCraft.frames.options.defaultFramesHeader:SetPoint('TOPLEFT', ScootsCraft.frames.optionDraggable, 'BOTTOMLEFT', 0, -10)
     ScootsCraft.frames.options.defaultFramesHeader:SetJustifyH('LEFT')
-    ScootsCraft.frames.options.defaultFramesHeader:SetText('Tooltip on the recipe list')
+    ScootsCraft.frames.options.defaultFramesHeader:SetText('Use default profession frames')
     
     -- Button
     ScootsCraft.frames.optionDefaultFrames = CreateFrame('Button', 'ScootsCraft-Option-UseDefaultFrames', ScootsCraft.frames.options, 'UIPanelButtonTemplate')
@@ -974,6 +1016,8 @@ ScootsCraft.setAckisButton = function()
         ScootsCraft.ackisButton:SetSize(80, 19)
         ScootsCraft.ackisButton:SetText('Ackis Scan')
         ScootsCraft.ackisButton:Show()
+        
+        ScootsCraft.frames.title:SetWidth(ScootsCraft.frames.title:GetWidth() - ScootsCraft.ackisButton:GetWidth())
         
         ScootsCraft.ackisButtonIsSet = true
     end
