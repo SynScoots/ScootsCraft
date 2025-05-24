@@ -91,6 +91,10 @@ ScootsCraft.buildUiMain = function()
     ScootsCraft.frames.front.rightBackground:SetTexture('Interface\\AddOns\\ScootsCraft\\Textures\\Main-Right')
     ScootsCraft.frames.front.rightBackground:SetPoint('TOPLEFT', 512, 0)
     ScootsCraft.frames.front.rightBackground:SetSize(256, 512)
+    
+    -- Tooltip
+    ScootsCraft.frames.tooltip = CreateFrame('GameTooltip', 'ScootsCraft-Tooltip', UIParent, 'GameTooltipTemplate')
+    ScootsCraft.frames.tooltip:Hide()
 end
 
 ScootsCraft.buildUiHeader = function()

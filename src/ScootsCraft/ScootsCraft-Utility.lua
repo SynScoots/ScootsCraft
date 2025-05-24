@@ -145,3 +145,24 @@ ScootsCraft.mapSpellIdToSlot = function(spellId)
     
     return nil
 end
+
+ScootsCraft.getItemLinkTooltipAsString = function(itemLink)
+    if(not itemLink) then
+        return ''
+    end
+
+    local lines = {}
+    ScootsCraft.frames.tooltip:SetOwner(UIParent)
+    ScootsCraft.frames.tooltip:ClearLines()
+    ScootsCraft.frames.tooltip:SetHyperlink(itemLink)
+    
+    for _, line in ipairs({ScootsCraft.frames.tooltip:GetRegions()}) do
+        if(line:IsObjectType('FontString')) then
+            table.insert(lines, line:GetText())
+        end
+    end
+    
+    ScootsCraft.frames.tooltip:Hide()
+    
+    return table.concat(lines, ' ')
+end

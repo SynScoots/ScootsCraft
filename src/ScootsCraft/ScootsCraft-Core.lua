@@ -520,19 +520,8 @@ ScootsCraft.filterCrafts = function()
                 
                 -- Filter: Search
                 if(ScootsCraft.filters[ScootsCraft.activeProfession].search) then
-                    if(not string.match(string.lower(craft.name), string.lower(ScootsCraft.filters[ScootsCraft.activeProfession].search))) then
-                        local hasMatch = false
-                        
-                        for _, reagent in pairs(craft.reagents) do
-                            if(string.match(string.lower(reagent.name), string.lower(ScootsCraft.filters[ScootsCraft.activeProfession].search))) then
-                                hasMatch = true
-                                break
-                            end
-                        end
-                        
-                        if(hasMatch ~= true) then
-                            break
-                        end
+                    if(not string.match(string.lower(ScootsCraft.getItemLinkTooltipAsString(craft.link)), string.lower(ScootsCraft.filters[ScootsCraft.activeProfession].search))) then
+                        break
                     end
                 end
                 
