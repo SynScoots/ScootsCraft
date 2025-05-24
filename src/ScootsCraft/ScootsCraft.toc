@@ -5,4 +5,7 @@
 ## Version: 3.3.5
 ## SavedVariables: SCOOTSCRAFT_OPTIONS
 
-ScootsCraft.lua
+ScootsCraft-Core.lua
+ScootsCraft-UI.lua
+ScootsCraft-Utility.lua
+ScootsCraft-FilterValues.lua
