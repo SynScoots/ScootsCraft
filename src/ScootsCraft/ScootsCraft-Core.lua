@@ -520,7 +520,7 @@ ScootsCraft.filterCrafts = function()
                 
                 -- Filter: Search
                 if(ScootsCraft.filters[ScootsCraft.activeProfession].search) then
-                    if(not string.match(string.lower(ScootsCraft.getItemLinkTooltipAsString(craft.link)), string.lower(ScootsCraft.filters[ScootsCraft.activeProfession].search))) then
+                    if(not string.match(string.lower(ScootsCraft.getItemLinkTooltipAsString(craft.tradelink)), string.lower(ScootsCraft.filters[ScootsCraft.activeProfession].search))) then
                         break
                     end
                 end
