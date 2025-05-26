@@ -631,7 +631,7 @@ ScootsCraft.updateDisplayedRecipes = function()
                     end
                 end
                 
-                if(recipe.detail.type == 'trivial' or ScootsCraft.skillLevels[ScootsCraft.activeProfession][1] >= ScootsCraft.skillLevels[ScootsCraft.activeProfession][2]) then
+                if(recipe.detail.type == nil or recipe.detail.type == 'trivial' or ScootsCraft.skillLevels[ScootsCraft.activeProfession][1] >= ScootsCraft.skillLevels[ScootsCraft.activeProfession][2]) then
                     frame.icon:SetAlpha(0)
                 else
                     frame.icon:SetTexture('Interface\\AddOns\\ScootsCraft\\Textures\\Craft-' .. recipe.detail.type)
