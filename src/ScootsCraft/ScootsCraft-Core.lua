@@ -448,6 +448,10 @@ ScootsCraft.cacheProfession = function()
             if(craft.slot ~= nil) then
                 ScootsCraft.cachedEquipmentSlots[craft.slot] = true
             end
+                
+            if(ScootsCraft.selectedCraft[ScootsCraft.activeProfession] and ScootsCraft.selectedCraft[ScootsCraft.activeProfession].craftid == craft.craftid) then
+                ScootsCraft.selectedCraft[ScootsCraft.activeProfession] = craft
+            end
             
             table.insert(ScootsCraft.cachedCrafts[sectionIndex], craft)
         end
@@ -535,11 +539,6 @@ ScootsCraft.filterCrafts = function()
                     ['type'] = 'craft',
                     ['detail'] = craft
                 })
-                
-                if(ScootsCraft.selectedCraft[ScootsCraft.activeProfession] and ScootsCraft.selectedCraft[ScootsCraft.activeProfession].craftid == craft.craftid) then
-                    selectedCraftInFilter = true
-                    ScootsCraft.selectRecipe(craft)
-                end
             until true
         end
             
@@ -548,12 +547,15 @@ ScootsCraft.filterCrafts = function()
         end
     end
     
-    if(selectedCraftInFilter == false) then
-        for _, craft in ipairs(ScootsCraft.filteredCrafts) do
-            if(craft.type == 'craft') then
-                ScootsCraft.selectRecipe(craft.detail)
-                break
-            end
+    if(ScootsCraft.selectedCraft[ScootsCraft.activeProfession]) then
+        ScootsCraft.selectRecipe(ScootsCraft.selectedCraft[ScootsCraft.activeProfession])
+        return nil
+    end
+    
+    for _, craft in ipairs(ScootsCraft.filteredCrafts) do
+        if(craft.type == 'craft') then
+            ScootsCraft.selectRecipe(craft.detail)
+            return nil
         end
     end
 end
