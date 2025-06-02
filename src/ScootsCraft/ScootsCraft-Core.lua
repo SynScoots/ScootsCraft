@@ -558,6 +558,10 @@ ScootsCraft.filterCrafts = function()
             return nil
         end
     end
+    
+    if(ScootsCraft.selectedCraft[ScootsCraft.activeProfession] == nil) then
+        ScootsCraft.frames.craftItem:Hide()
+    end
 end
 
 ScootsCraft.updateDisplayedRecipes = function()
@@ -767,6 +771,8 @@ ScootsCraft.selectRecipe = function(craft)
             end
         end
     end
+    
+    ScootsCraft.frames.craftItem:Show()
 end
 
 ScootsCraft.jumpToItemId = function(itemId)
