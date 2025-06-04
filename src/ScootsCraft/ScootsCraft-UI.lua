@@ -460,7 +460,7 @@ ScootsCraft.buildUiFooter = function()
     ScootsCraft.frames.createButton:Disable()
     
     ScootsCraft.frames.createButton:SetScript('OnClick', function()
-        if(ScootsCraft.selectedCraft[ScootsCraft.activeProfession].number > 0) then
+        if(ScootsCraft.activeProfession == ScootsCraft.runeforging or ScootsCraft.selectedCraft[ScootsCraft.activeProfession].number > 0) then
             DoTradeSkill(ScootsCraft.selectedCraft[ScootsCraft.activeProfession].index, ScootsCraft.frames.quantity:GetNumber())
             EditBox_ClearFocus(ScootsCraft.frames.quantity)
         end
