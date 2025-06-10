@@ -170,7 +170,6 @@ ScootsCraft.buildUiHeader = function()
     for spellIndex, _ in ipairs(ScootsCraft.spellIds) do
         local spell = {
             ['id'] = nil,
-            ['bookId'] = nil,
             ['name'] = nil,
             ['icon'] = nil,
             ['button'] = CreateFrame('Button', 'ScootsCraft-ProfessionButton-' .. spellIndex, ScootsCraft.frames.professionButtonsHolder, 'SecureActionButtonTemplate')
@@ -193,7 +192,7 @@ ScootsCraft.buildUiHeader = function()
                 
         spell.button:SetScript('OnEnter', function()
             GameTooltip_SetDefaultAnchor(GameTooltip, spell.button)
-            GameTooltip:SetSpell(spell.bookId, BOOKTYPE_SPELL)
+            GameTooltip:SetSpellByID(spell.id)
             GameTooltip:Show()
             
             if((not ScootsCraft.activeProfession or spell.name ~= ScootsCraft.activeProfession) and (ScootsCraft.activeProfession ~= 'Mining' or spell.name ~= 'Smelting')) then

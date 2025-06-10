@@ -119,15 +119,6 @@ ScootsCraft.setProfessionButtons = function()
             ScootsCraft.professionSpells[spellIndex].name = name
             ScootsCraft.professionSpells[spellIndex].icon = icon
             
-            for i = 1, MAX_SPELLS do
-                bookSpellName = GetSpellName(i, BOOKTYPE_SPELL)
-                
-                if(bookSpellName == name) then
-                    ScootsCraft.professionSpells[spellIndex].bookId = i
-                    break
-                end
-            end
-            
             ScootsCraft.professionSpells[spellIndex].button:SetAttribute('spell', spellId)
             ScootsCraft.professionSpells[spellIndex].button:SetNormalTexture(icon)
             
