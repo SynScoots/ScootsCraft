@@ -209,6 +209,16 @@ function private.InitializeListFrame()
 		if not clicked_line then
 			return
 		end
+		
+		-- ʕ •ᴥ•ʔ✿ Right-click functionality for .findnpc command ✿ ʕ •ᴥ•ʔ
+		if button == "RightButton" and clicked_line.npc_id then
+			local vendor = private.vendor_list[clicked_line.npc_id]
+			if vendor and vendor.name then
+				_G.SendChatMessage(".findnpc " .. vendor.name, "SAY")
+			end
+			return
+		end
+		
 		-- First, check if this is a "modified" click, and react appropriately
 		if clicked_line.recipe_id and _G.IsModifierKeyDown() then
 			if _G.IsControlKeyDown() and _G.IsShiftKeyDown() then
@@ -343,6 +353,8 @@ function private.InitializeListFrame()
 		end
 		cur_state.container = cur_container
 
+		cur_state:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+		cur_entry:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 		cur_state:SetScript("OnClick", ListItem_OnClick)
 		cur_entry:SetScript("OnClick", ListItem_OnClick)
 
