@@ -636,7 +636,7 @@ ScootsCraft.updateDisplayedRecipes = function()
                 end
                 
                 local suffix = ''
-                if(recipe.detail.number > 0) then
+                if(recipe.detail.number and recipe.detail.number > 0) then
                     suffix = ' [' .. recipe.detail.number .. ']'
                 end
                 frame.text:SetText(recipe.detail.name .. suffix)
