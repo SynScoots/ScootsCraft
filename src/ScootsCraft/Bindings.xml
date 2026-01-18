@@ -1,0 +1,5 @@
+<Bindings>
+    <Binding name="SCOOTSCRAFT_TOGGLE_WINDOW" description="Toggles visibility of the ScootsCraft window." header="ScootsCraft">
+        ScootsCraft.interface.toggle()
+    </Binding>
+</Bindings>
