@@ -261,11 +261,11 @@ ScootsCraft.fetchRecipes = function(skillId)
         skillId,
         includeFilter,
         excludeFilter,
-        -3,
-        ScootsCraft.getFilter('search'),
-        ScootsCraft.getFilter('attuned-level'),
-        -1,
-        -1,
+        -3, -- Sort flag
+        ScootsCraft.getFilter('search'),        
+        ScootsCraft.getFilter('attuned-level'), 
+        -1, -- Item class
+        -1, -- Item sub-class
         ScootsCraft.getFilter('inv-slot')
     )
 end
@@ -279,8 +279,8 @@ ScootsCraft.refreshRecipeList = function()
     local headerRewrites = ScootsCraft.data.getSectionRewrites()
     local spellHeaderRewrites = ScootsCraft.data.getSpellSectionRewrites()
     
-    for _, spellId in ipairs(recipes) do
-        local _, spellName, _, _, _, _, headerName = Custom_GetProfessionRecipeInfo(spellId)
+    for spellIndex, spellId in ipairs(recipes) do
+        local headerName = select(7, Custom_GetProfessionRecipeInfo(spellId))
         
         if(spellHeaderRewrites[ScootsCraft.activeSkill][spellId] ~= nil) then
             headerName = spellHeaderRewrites[ScootsCraft.activeSkill][spellId]
@@ -292,7 +292,7 @@ ScootsCraft.refreshRecipeList = function()
             table.insert(ScootsCraft.recipes, {
                 ['section'] = headerName,
                 ['spellId'] = spellId,
-                ['spellName'] = spellName,
+                ['index'] = spellIndex,
             })
         end
     end
@@ -319,17 +319,15 @@ ScootsCraft.refreshRecipeList = function()
                 return false
             end
         end
-            
+        
         if(a.section < b.section) then
             return true
         elseif(a.section > b.section) then
             return false
         end
         
-        if(a.spellName < b.spellName) then
+        if(a.index < b.index) then
             return true
-        elseif(a.spellName > b.spellName) then
-            return false
         end
             
         return false
