@@ -21,7 +21,11 @@ ScootsCraft.interface.build = function()
     ScootsCraft.interface.buildRecipeList()
     ScootsCraft.interface.buildDetailsPane()
     ScootsCraft.interface.buildSummaryPane()
-    ScootsCraft.interface.buildFooter()
+    ScootsCraft.interface.buildFooterLeft()
+    ScootsCraft.interface.buildFooterRight()
+    
+    ScootsCraft.tooltip = CreateFrame('GameTooltip', 'ScootsCraft-Tooltip', UIParent, 'GameTooltipTemplate')
+    ScootsCraft.tooltip:Hide()
     
     ScootsCraft.setActiveSkill(skillIndex)
     
@@ -122,7 +126,7 @@ ScootsCraft.interface.buildMainWindow = function()
     ScootsCraft.frames.closeButton:SetScript('OnClick', ScootsCraft.interface.toggle)
 end
 
-ScootsCraft.interface.buildFooter = function()
+ScootsCraft.interface.buildFooterLeft = function()
     ScootsCraft.frames.summariseButton = CreateFrame('Button', 'ScootsCraft-SummariseButton', ScootsCraft.frames.front, 'UIPanelButtonTemplate')
     ScootsCraft.frames.summariseButton:SetSize(80, 19)
     ScootsCraft.frames.summariseButton:SetPoint('TOPLEFT', ScootsCraft.frames.front, 'TOPLEFT', 16, -410)
@@ -183,6 +187,12 @@ ScootsCraft.interface.buildFooter = function()
     ScootsCraft.frames.summariseAllButton:SetScript('OnLeave', GameTooltip_Hide)
     
     --
+    
+    ScootsCraft.frames.front.recipeCount = ScootsCraft.frames.front:CreateFontString(nil, 'OVERLAY', 'GameFontNormalSmall')
+    ScootsCraft.frames.front.recipeCount:SetPoint('TOPRIGHT', ScootsCraft.frames.front, 'TOPLEFT', 170, -392)
+    ScootsCraft.frames.front.recipeCount:SetJustifyH('RIGHT')
+    
+    --
 
     ScootsCraft.frames.toggleAllSections = CreateFrame('Button', 'ScootsCraft-ToggleAllSections', ScootsCraft.frames.front)
     ScootsCraft.frames.toggleAllSections:SetSize(16, 16)
@@ -198,15 +208,9 @@ ScootsCraft.interface.buildFooter = function()
     ScootsCraft.frames.toggleAllSections.label:SetPoint('LEFT', ScootsCraft.frames.toggleAllSections, 'RIGHT', 3, 0)
     ScootsCraft.frames.toggleAllSections.label:SetJustifyH('LEFT')
     ScootsCraft.frames.toggleAllSections.label:SetText('All')
-    
-    --
-    
-    ScootsCraft.frames.front.recipeCount = ScootsCraft.frames.front:CreateFontString(nil, 'OVERLAY', 'GameFontNormalSmall')
-    ScootsCraft.frames.front.recipeCount:SetPoint('TOPRIGHT', ScootsCraft.frames.front, 'TOPLEFT', 476, -414)
-    ScootsCraft.frames.front.recipeCount:SetJustifyH('RIGHT')
-    
-    --
-    
+end
+
+ScootsCraft.interface.buildFooterRight = function()
     ScootsCraft.frames.createButton = CreateFrame('Button', 'ScootsCraft-CreateButton', ScootsCraft.frames.front, 'UIPanelButtonTemplate')
     ScootsCraft.frames.createButton:SetSize(80, 19)
     ScootsCraft.frames.createButton:SetPoint('TOPLEFT', ScootsCraft.frames.front, 'TOPLEFT', 750, -410)
@@ -317,6 +321,80 @@ ScootsCraft.interface.buildFooter = function()
         ScootsCraft.frames.quantity:SetNumber(math.min(200, (select(5, Custom_GetProfessionRecipeInfo(ScootsCraft.visibleSpellId)))))
         ScootsCraft.craftItem()
     end)
+    
+    --
+    
+    ScootsCraft.frames.front.forgeHelper = {}
+    
+    local map = {
+        {
+            ['name'] = 'Lightforged',
+            ['value'] = 3,
+        },
+        {
+            ['name'] = 'Warforged',
+            ['value'] = 2,
+        },
+        {
+            ['name'] = 'Titanforged',
+            ['value'] = 1,
+        },
+    }
+    
+    local prev = nil
+    
+    for _, field in ipairs(map) do
+        local checkbox = CreateFrame('CheckButton', 'ScootsCraft-ForgeHelper-' .. field.name, ScootsCraft.frames.front, 'UICheckButtonTemplate')
+        checkbox:SetSize(22, 22)
+        
+        _G[checkbox:GetName() .. 'Text']:SetText(field.name)
+        _G[checkbox:GetName() .. 'Text']:ClearAllPoints()
+        _G[checkbox:GetName() .. 'Text']:SetPoint('TOPLEFT', checkbox, 'TOPRIGHT', -2, -5)
+        
+        checkbox:SetHitRectInsets(0, 0 - _G[checkbox:GetName() .. 'Text']:GetWidth(), 0, 0)
+        
+        if(prev == nil) then
+            checkbox:SetPoint('RIGHT', ScootsCraft.frames.createAllButton, 'LEFT', 0 - (10 + _G[checkbox:GetName() .. 'Text']:GetWidth()), -1)
+        else
+            checkbox:SetPoint('RIGHT', prev, 'LEFT', 0 - _G[checkbox:GetName() .. 'Text']:GetWidth(), 0)
+        end
+        
+        checkbox:SetScript('OnClick', function()
+            if(checkbox:GetChecked() == 1) then
+                for name, check in pairs(ScootsCraft.frames.front.forgeHelper) do
+                    if(name ~= field.name) then
+                        check:SetChecked(false)
+                    end
+                end
+                
+                ScootsCraft.forgeHelper = field.value
+            else
+                ScootsCraft.forgeHelper = nil
+            end
+        end)
+        
+        checkbox:SetScript('OnEnter', function()
+            GameTooltip:SetOwner(checkbox, 'ANCHOR_TOPLEFT')
+            GameTooltip:SetText('Forge-helper: ' .. field.name, HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b)
+            GameTooltip:AddLine('With this field checked, automatically destroy crafted items below ' .. field.name .. ' variants. Additionally, the quantity field will no longer reset after crafting.', nil, nil, nil, true)
+            GameTooltip:AddLine(' ')
+            GameTooltip:AddLine('If a merchant window is open, failed attempts will be vendored instead of destroyed.', nil, nil, nil, true)
+            GameTooltip:Show()
+        end)
+        
+        checkbox:SetScript('OnLeave', GameTooltip_Hide)
+        
+        checkbox:Hide()
+        
+        ScootsCraft.frames.front.forgeHelper[field.name] = checkbox
+        prev = checkbox
+    end
+    
+    ScootsCraft.frames.front.forgeHelperTitle = ScootsCraft.frames.front:CreateFontString(nil, 'OVERLAY', 'GameFontNormalSmall')
+    ScootsCraft.frames.front.forgeHelperTitle:SetPoint('RIGHT', prev, 'LEFT', 0, 1)
+    ScootsCraft.frames.front.forgeHelperTitle:SetJustifyH('RIGHT')
+    ScootsCraft.frames.front.forgeHelperTitle:SetText('Forge-helper: ')
+    ScootsCraft.frames.front.forgeHelperTitle:Hide()
 end
 
 ScootsCraft.interface.buildProfessionSwatch = function()
@@ -446,6 +524,12 @@ ScootsCraft.interface.buildRecipeList = function()
         recipeLine.selected:SetAllPoints()
         recipeLine.selected:SetTexture('Interface\\Buttons\\UI-Listbox-Highlight2')
         recipeLine.selected:SetAlpha(0)
+        
+        recipeLine.bounty = recipeLine:CreateTexture(nil, 'OVERLAY')
+        recipeLine.bounty:SetSize(ScootsCraft.recipeLineHeight - 2, ScootsCraft.recipeLineHeight - 2)
+        recipeLine.bounty:SetTexture('Interface\\MoneyFrame\\UI-GoldIcon')
+        recipeLine.bounty:SetPoint('TOPRIGHT', 0, -1)
+        recipeLine.bounty:SetAlpha(0)
         
         recipeLine:SetScript('OnEnter', function()
             if(recipeLine.isSectionHead ~= true) then

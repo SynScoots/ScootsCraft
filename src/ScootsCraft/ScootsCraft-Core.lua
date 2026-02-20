@@ -27,6 +27,10 @@ ScootsCraft = {
         ['options'] = {},
     },
     ['triggeredEvents'] = {},
+    ['forgeHelper'] = nil,
+    ['forgeHelperItem'] = false,
+    ['forgeHelperQuantity'] = nil,
+    ['merchantOpen'] = false,
 }
 
 BINDING_HEADER_ScootsCraft = ScootsCraft.title
@@ -130,6 +134,10 @@ ScootsCraft.eventHandler = function(self, event)
     or event == 'ADDON_LOADED'
     or event == 'SKILL_LINES_CHANGED') then
         ScootsCraft.triggeredEvents[event] = true
+    elseif(event == 'MERCHANT_SHOW') then
+        ScootsCraft.merchantOpen = true
+    elseif(event == 'MERCHANT_CLOSED') then
+        ScootsCraft.merchantOpen = false
     elseif(event == 'PLAYER_LOGOUT') then
         ScootsCraft.shutdown()
     end
@@ -157,6 +165,10 @@ ScootsCraft.updateLoop = function()
             ScootsCraft.frames.quantity:SetNumber(1)
             ScootsCraft.refreshRecipeList()
             ScootsCraft.renderRecipe(ScootsCraft.visibleSpellId)
+            
+            if(ScootsCraft.forgeHelper ~= nil and ScootsCraft.forgeHelperItem ~= nil) then
+                ScootsCraft.handleForgeHelper()
+            end
         end
         
         if(ScootsCraft.triggeredEvents['SKILL_LINES_CHANGED'] ~= nil) then
@@ -231,6 +243,14 @@ ScootsCraft.setActiveSkill = function(skillIndex)
             end
         end
     end
+    
+    table.sort(ScootsCraft.sectionList, function(a, b)
+        if(a < b) then
+            return true
+        end
+        
+        return false
+    end)
     
     --
     
@@ -457,6 +477,7 @@ ScootsCraft.renderRecipeList = function()
             frame.sectionToggle:Show()
             frame.isSectionHead = true
             frame.section = sectionName
+            frame.bounty:SetAlpha(0)
             
             if(ScootsCraft.sections[ScootsCraft.activeSkill][sectionName]) then
                 frame.sectionToggle:SetNormalTexture('Interface\\Buttons\\UI-MinusButton-Up')
@@ -499,11 +520,12 @@ ScootsCraft.renderRecipeList = function()
                 if((createdItemId or 0) == 0) then
                     frame.text:SetTextColor(0.5, 0.5, 0.5)
                     frame.selected:SetVertexColor(0.5, 0.5, 0.5)
+                    frame.bounty:SetAlpha(0)
                 else
                     local attuneable = CanAttuneItemHelper(createdItemId)
                     local forgeLevel = GetItemAttuneForge(createdItemId)
                     
-                    if(attuneable <= 0) then
+                    if(attuneable <= 0 and forgeLevel < 0) then
                         frame.text:SetTextColor(0.5, 0.5, 0.5)
                         frame.selected:SetVertexColor(0.5, 0.5, 0.5)
                     else
@@ -523,6 +545,12 @@ ScootsCraft.renderRecipeList = function()
                             frame.text:SetTextColor(0.8, 0.8, 0.8)
                             frame.selected:SetVertexColor(0.8, 0.8, 0.8)
                         end
+                    end
+                    
+                    if(GetCustomGameData(31, createdItemId) > 0) then
+                        frame.bounty:SetAlpha(1)
+                    else
+                        frame.bounty:SetAlpha(0)
                     end
                 end
             end
@@ -550,6 +578,12 @@ ScootsCraft.renderRecipe = function(spellId)
         ScootsCraft.frames.decrement:Hide()
         ScootsCraft.frames.createAllButton:Hide()
         
+        for _, checkbox in pairs(ScootsCraft.frames.front.forgeHelper) do
+            checkbox:Hide()
+        end
+        
+        ScootsCraft.frames.front.forgeHelperTitle:Hide()
+        
         return false
     end
     
@@ -575,7 +609,6 @@ ScootsCraft.renderRecipe = function(spellId)
         iconTexture = GetItemIcon(createdItemId)
     else
         iconTexture = select(3, GetSpellInfo(spellId))
-
     end
     
     ScootsCraft.frames.craftIcon:SetNormalTexture(iconTexture)
@@ -676,12 +709,32 @@ ScootsCraft.renderRecipe = function(spellId)
         ScootsCraft.frames.quantity:Hide()
         ScootsCraft.frames.decrement:Hide()
         ScootsCraft.frames.createAllButton:Hide()
+        
+        for _, checkbox in pairs(ScootsCraft.frames.front.forgeHelper) do
+            checkbox:Hide()
+        end
+        
+        ScootsCraft.frames.front.forgeHelperTitle:Hide()
     else
         ScootsCraft.frames.createButton:SetText('Create')
         ScootsCraft.frames.increment:Show()
         ScootsCraft.frames.quantity:Show()
         ScootsCraft.frames.decrement:Show()
         ScootsCraft.frames.createAllButton:Show()
+        
+        if(ScootsCraft.data.getItemCanForge(createdItemId)) then
+            for _, checkbox in pairs(ScootsCraft.frames.front.forgeHelper) do
+                checkbox:Show()
+            end
+            
+            ScootsCraft.frames.front.forgeHelperTitle:Show()
+        else
+            for _, checkbox in pairs(ScootsCraft.frames.front.forgeHelper) do
+                checkbox:Hide()
+            end
+            
+            ScootsCraft.frames.front.forgeHelperTitle:Hide()
+        end
     end
 end
 
@@ -818,7 +871,47 @@ ScootsCraft.craftItem = function()
         quantity = 1
     end
     
+    if(ScootsCraft.forgeHelper ~= nil) then
+        local _, _, createdItemId, _, _, altVerb = Custom_GetProfessionRecipeInfo(ScootsCraft.visibleSpellId)
+        
+        if(altVerb == nil and ScootsCraft.data.getItemCanForge(createdItemId)) then
+            ScootsCraft.forgeHelperItem = createdItemId
+            ScootsCraft.forgeHelperQuantity = quantity
+        end
+    end
+    
     Custom_DoProfessionRecipe(ScootsCraft.visibleSpellId, quantity)
+end
+
+ScootsCraft.handleForgeHelper = function()
+    for bagIndex = 0, 4 do
+        local bagSlots = GetContainerNumSlots(bagIndex)
+        
+        for slotIndex = 1, bagSlots do
+            local _, bagItemCount, _, _, _, _, bagItemLink = GetContainerItemInfo(bagIndex, slotIndex)
+            
+            if(bagItemLink ~= nil) then
+                local bagItemId = CustomExtractItemId(bagItemLink)
+                
+                if(bagItemId == ScootsCraft.forgeHelperItem) then
+                    if(GetItemLinkTitanforge(bagItemLink) >= ScootsCraft.forgeHelper) then
+                        ScootsCraft.forgeHelperItem = nil
+                    else
+                        if(ScootsCraft.merchantOpen) then
+                            UseContainerItem(bagIndex, slotIndex)
+                        else
+                            PickupContainerItem(bagIndex, slotIndex)
+                            DeleteCursorItem()
+                        end
+                    end
+                end
+            end
+        end
+    end
+    
+    if(ScootsCraft.forgeHelperItem ~= nil) then
+        ScootsCraft.frames.quantity:SetNumber(ScootsCraft.forgeHelperQuantity)
+    end
 end
 
 ScootsCraft.handleReagentJump = function(itemId)
@@ -874,6 +967,8 @@ ScootsCraft.frames.events:SetScript('OnEvent', ScootsCraft.eventHandler)
 ScootsCraft.frames.events:RegisterEvent('ADDON_LOADED')
 ScootsCraft.frames.events:RegisterEvent('PLAYER_LOGOUT')
 ScootsCraft.frames.events:RegisterEvent('SKILL_LINES_CHANGED')
+ScootsCraft.frames.events:RegisterEvent('MERCHANT_SHOW')
+ScootsCraft.frames.events:RegisterEvent('MERCHANT_CLOSED')
 
 -- TODO
     -- Cooldown

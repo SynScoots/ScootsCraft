@@ -886,3 +886,41 @@ ScootsCraft.data.getItemInvSlots = function()
         ['INVTYPE_RANGEDRIGHT'] = 26,
     }
 end
+
+ScootsCraft.data.getItemCanForge = function(itemId)
+    if((itemId or 0) == 0) then
+        return false
+    end
+
+    local itemRarity = select(3, GetItemInfoCustom(itemId))
+    if(itemRarity == nil or itemRarity < 2 or itemRarity > 4) then
+        return false
+    end
+    
+    if((IsAttunableBySomeone(itemId) or 0) == 0) then
+        return false
+    end
+    
+    if(CanAttuneItemHelper(itemId) <= 0) then
+        ScootsCraft.tooltip:ClearLines()
+        ScootsCraft.tooltip:SetOwner(UIParent)
+        ScootsCraft.tooltip:SetHyperlink('item:' .. itemId)
+        ScootsCraft.tooltip:Show()
+        local tooltipLines = {ScootsCraft.tooltip:GetRegions()}
+        
+        for _, line in ipairs(tooltipLines) do
+            if(line:IsObjectType('FontString')) then
+                if(line:GetText() == ITEM_BIND_ON_EQUIP) then
+                    break
+                elseif(line:GetText() == ITEM_BIND_ON_PICKUP) then
+                    ScootsCraft.tooltip:Hide()
+                    return false
+                end
+            end
+        end
+        
+        ScootsCraft.tooltip:Hide()
+    end
+    
+    return true
+end
