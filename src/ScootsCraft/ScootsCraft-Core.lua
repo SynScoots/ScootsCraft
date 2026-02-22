@@ -51,7 +51,11 @@ ScootsCraft.preInitChecks = function()
     or Custom_GetProfessionRecipeReagents == nil
     or Custom_DoProfessionRecipe == nil
     or GetCustomGameData == nil
-    or GetItemInfoCustom == nil) then
+    or GetItemInfoCustom == nil
+    or Custom_GetSpellCooldown == nil
+    or Custom_GetSpellDesc == nil
+    or Custom_GetSpellTools == nil
+    or Custom_GetSpellEffect == nil) then
         return false
     end
 
@@ -123,6 +127,18 @@ ScootsCraft.cacheProfessions = function()
             ScootsCraft.skills[skillIndex].icon = icon
         end
     end
+    
+    ScootsCraft.cacheSkillLevels()
+end
+
+ScootsCraft.cacheSkillLevels = function()
+    for skillIndex, skill in pairs(ScootsCraft.skills) do
+        local internalSkillIndex = Custom_GetSkillIndex(skill.skillId)
+        local _, _, _, currentLevel, _, _, maxLevel = GetSkillLineInfo(internalSkillIndex)
+        
+        ScootsCraft.skills[skillIndex].currentLevel = currentLevel
+        ScootsCraft.skills[skillIndex].maxLevel = maxLevel
+    end
 end
 
 ScootsCraft.shutdown = function()
@@ -161,8 +177,12 @@ ScootsCraft.updateLoop = function()
             
     if(ScootsCraft.frames.master ~= nil and ScootsCraft.frames.master:IsVisible()) then
         if(ScootsCraft.triggeredEvents['BAG_UPDATE'] ~= nil) then
+            local skillIndex = ScootsCraft.skillIndexMap[ScootsCraft.activeSkill]
+        
             ScootsCraft.triggeredEvents['BAG_UPDATE'] = nil
             ScootsCraft.frames.quantity:SetNumber(1)
+            ScootsCraft.cacheSkillLevels()
+            ScootsCraft.frames.title.skillName:SetText(string.format(' - %s [%d/%d]', ScootsCraft.skills[skillIndex].displayName, ScootsCraft.skills[skillIndex].currentLevel, ScootsCraft.skills[skillIndex].maxLevel))
             ScootsCraft.refreshRecipeList()
             ScootsCraft.renderRecipe(ScootsCraft.visibleSpellId)
             
@@ -191,8 +211,7 @@ ScootsCraft.setActiveSkill = function(skillIndex)
     ScootsCraft.frames.skillButtons[ScootsCraft.skills[skillIndex].name].activeGlow:SetVertexColor(0.8, 0.8, 0)
     ScootsCraft.frames.skillButtons[ScootsCraft.skills[skillIndex].name].activeGlow:SetAlpha(1)
     
-    ScootsCraft.frames.title.skillName:SetText(' - ' .. ScootsCraft.skills[skillIndex].displayName)
-    -- TODO: Set profession current/max skill display
+    ScootsCraft.frames.title.skillName:SetText(string.format(' - %s [%d/%d]', ScootsCraft.skills[skillIndex].displayName, ScootsCraft.skills[skillIndex].currentLevel, ScootsCraft.skills[skillIndex].maxLevel))
     SetPortraitToTexture(ScootsCraft.frames.master.icon, ScootsCraft.skills[skillIndex].icon)
     
     --
@@ -447,6 +466,8 @@ ScootsCraft.setToggleAllSectionsVisibleState = function()
 end
 
 ScootsCraft.renderRecipeList = function()
+    local skillIndex = ScootsCraft.skillIndexMap[ScootsCraft.activeSkill]
+
     if(#ScootsCraft.recipes == 0) then
         ScootsCraft.frames.toggleAllSections:Hide()
     else
@@ -506,6 +527,13 @@ ScootsCraft.renderRecipeList = function()
                 frame.sectionToggle:Hide()
                 
                 local skillId, spellName, createdItemId, craftedItemCount, canCraftTimesNow, altVerb, headerName, levelUpDifficulty = Custom_GetProfessionRecipeInfo(recipe.spellId)
+                
+                if(levelUpDifficulty ~= 'trivial' and ScootsCraft.skills[skillIndex].currentLevel < ScootsCraft.skills[skillIndex].maxLevel) then
+                    frame.icon:SetTexture('Interface\\AddOns\\ScootsCraft\\Textures\\Craft-' .. (levelUpDifficulty:gsub('^%l', string.upper)))
+                    frame.icon:SetAlpha(1)
+                else
+                    frame.icon:SetAlpha(0)
+                end
                 
                 if(canCraftTimesNow and canCraftTimesNow > 0) then
                     frame.text:SetText(spellName .. ' [' .. tostring(canCraftTimesNow) .. ']')
@@ -615,10 +643,22 @@ ScootsCraft.renderRecipe = function(spellId)
     ScootsCraft.frames.craftIcon.spellId = spellId
     height = height + ScootsCraft.frames.craftIcon:GetHeight() + 4
     
-    if(craftedItemCount > 1) then
-        ScootsCraft.frames.craftIcon.text:SetText(craftedItemCount)
+    local _, minCraft, maxCraft = Custom_GetSpellEffect(spellId, 0)
+    if(minCraft > 0 or maxCraft > 1) then
+        maxCraft = minCraft + maxCraft
+        minCraft = minCraft + 1
+        
+        if(maxCraft > minCraft) then
+            ScootsCraft.frames.craftIcon.text:SetText(string.format('%d-%d', minCraft, maxCraft))
+        else
+            ScootsCraft.frames.craftIcon.text:SetText(minCraft)
+        end
     else
-        ScootsCraft.frames.craftIcon.text:SetText('')
+        if(craftedItemCount > 1) then
+            ScootsCraft.frames.craftIcon.text:SetText(craftedItemCount)
+        else
+            ScootsCraft.frames.craftIcon.text:SetText('')
+        end
     end
     
     --
@@ -627,10 +667,10 @@ ScootsCraft.renderRecipe = function(spellId)
     
     --
     
-    -- TODO
-    if(false) then
+    local requires = ScootsCraft.parseRequirements(spellId)
+    if(requires) then
         ScootsCraft.frames.craftItem.requiresLabel:SetText('Requires:')
-        ScootsCraft.frames.craftItem.requires:SetText(craft.requires)
+        ScootsCraft.frames.craftItem.requires:SetText(requires)
     else
         ScootsCraft.frames.craftItem.requiresLabel:SetText('')
         ScootsCraft.frames.craftItem.requires:SetText('')
@@ -638,19 +678,19 @@ ScootsCraft.renderRecipe = function(spellId)
     
     --
     
-    -- TODO
-    if(false) then
-        ScootsCraft.frames.craftItem.cooldown:SetText('Cooldown remaining: ' .. SecondsToTime(cooldown))
+    local cooldown = Custom_GetSpellCooldown(spellId)
+    if(cooldown > 0) then
+        ScootsCraft.frames.craftItem.cooldown:SetText('Cooldown remaining: ' .. SecondsToTime(math.ceil(cooldown / 1000)))
     else
         ScootsCraft.frames.craftItem.cooldown:SetText('')
     end
     
     --
     
-    -- TODO
-    if(false) then
+    local description = Custom_GetSpellDesc(spellId, 5)
+    if(description) then
         ScootsCraft.frames.craftItem.description:SetPoint('TOPLEFT', ScootsCraft.frames.craftIcon, 'BOTTOMLEFT', 0, -10)
-        ScootsCraft.frames.craftItem.description:SetText(craft.description)
+        ScootsCraft.frames.craftItem.description:SetText(description)
         height = height + ScootsCraft.frames.craftItem.description:GetHeight() + 10
     else
         ScootsCraft.frames.craftItem.description:SetPoint('TOPLEFT', ScootsCraft.frames.craftIcon, 'BOTTOMLEFT', 0, 0)
@@ -735,6 +775,41 @@ ScootsCraft.renderRecipe = function(spellId)
             
             ScootsCraft.frames.front.forgeHelperTitle:Hide()
         end
+    end
+end
+
+ScootsCraft.parseRequirements = function(spellId)
+    local _, focusName, _, areaName, _, totemOneName, _, totemTwoName, _, totemOneCatName, _, totemTwoCatName = Custom_GetSpellTools(spellId)
+    local output = {}
+    
+    if(focusName) then
+        table.insert(output, focusName)
+    end
+    
+    if(areaName) then
+        table.insert(output, areaName)
+    end
+    
+    if(totemOneName) then
+        table.insert(output, totemOneName)
+    end
+    
+    if(totemTwoName) then
+        table.insert(output, totemTwoName)
+    end
+    
+    if(totemOneCatName) then
+        table.insert(output, totemOneCatName)
+    end
+    
+    if(totemTwoCatName) then
+        table.insert(output, totemTwoCatName)
+    end
+    
+    if(#output == 0) then
+        return nil
+    else
+        return table.concat(output, ', ')
     end
 end
 
@@ -969,11 +1044,3 @@ ScootsCraft.frames.events:RegisterEvent('PLAYER_LOGOUT')
 ScootsCraft.frames.events:RegisterEvent('SKILL_LINES_CHANGED')
 ScootsCraft.frames.events:RegisterEvent('MERCHANT_SHOW')
 ScootsCraft.frames.events:RegisterEvent('MERCHANT_CLOSED')
-
--- TODO
-    -- Cooldown
-    -- Requires line
-    -- Description
-    -- Skill-up indicators
-    
-    -- Search code for TODO

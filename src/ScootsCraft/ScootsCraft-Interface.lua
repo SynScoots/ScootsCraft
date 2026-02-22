@@ -513,7 +513,7 @@ ScootsCraft.interface.buildRecipeList = function()
         
         recipeLine.icon = recipeLine:CreateTexture(nil, 'OVERLAY')
         recipeLine.icon:SetSize(ScootsCraft.recipeLineHeight, ScootsCraft.recipeLineHeight)
-        recipeLine.icon:SetPoint('TOPLEFT', 2, 0)
+        recipeLine.icon:SetPoint('TOPLEFT', 2, 1)
         recipeLine.icon:SetAlpha(0)
     
         recipeLine.text = recipeLine:CreateFontString(nil, 'OVERLAY', 'GameFontHighlight')
