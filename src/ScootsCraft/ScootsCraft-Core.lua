@@ -41,21 +41,15 @@ SlashCmdList['SCOOTSCRAFT'] = function(...)
     ScootsCraft.interface.toggle()
 end
 
+function ScootsCraft_Core_Init()
+    ScootsCraft.synastriaApiLoaded = true
+end
+
 ScootsCraft.preInitChecks = function()
     if(ScootsCraft.interface == nil
     or ScootsCraft.data == nil
     or ScootsCraft.options == nil
-    or Custom_GetProfessionRecipes == nil
-    or Custom_GetProfessionRecipeInfo == nil
-    or Custom_GetProfessionRecipeFromCraftedItem == nil
-    or Custom_GetProfessionRecipeReagents == nil
-    or Custom_DoProfessionRecipe == nil
-    or GetCustomGameData == nil
-    or GetItemInfoCustom == nil
-    or Custom_GetSpellCooldown == nil
-    or Custom_GetSpellDesc == nil
-    or Custom_GetSpellTools == nil
-    or Custom_GetSpellEffect == nil) then
+    or ScootsCraft.synastriaApiLoaded ~= true) then
         return false
     end
 
@@ -1044,3 +1038,5 @@ ScootsCraft.frames.events:RegisterEvent('PLAYER_LOGOUT')
 ScootsCraft.frames.events:RegisterEvent('SKILL_LINES_CHANGED')
 ScootsCraft.frames.events:RegisterEvent('MERCHANT_SHOW')
 ScootsCraft.frames.events:RegisterEvent('MERCHANT_CLOSED')
+
+SynastriaSafeInvoke('ScootsCraft_Core_Init')
