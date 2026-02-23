@@ -902,24 +902,10 @@ ScootsCraft.data.getItemCanForge = function(itemId)
     end
     
     if(CanAttuneItemHelper(itemId) <= 0) then
-        ScootsCraft.tooltip:ClearLines()
-        ScootsCraft.tooltip:SetOwner(UIParent)
-        ScootsCraft.tooltip:SetHyperlink('item:' .. itemId)
-        ScootsCraft.tooltip:Show()
-        local tooltipLines = {ScootsCraft.tooltip:GetRegions()}
-        
-        for _, line in ipairs(tooltipLines) do
-            if(line:IsObjectType('FontString')) then
-                if(line:GetText() == ITEM_BIND_ON_EQUIP) then
-                    break
-                elseif(line:GetText() == ITEM_BIND_ON_PICKUP) then
-                    ScootsCraft.tooltip:Hide()
-                    return false
-                end
-            end
+        local _, itemTagsTwo = GetItemTagsCustom(itemId)
+        if(bit.band(itemTagsTwo or 0, 0x80) > 0) then -- Check if item is BoP
+            return false
         end
-        
-        ScootsCraft.tooltip:Hide()
     end
     
     return true

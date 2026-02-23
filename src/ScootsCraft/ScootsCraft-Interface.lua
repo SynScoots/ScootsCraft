@@ -24,9 +24,6 @@ ScootsCraft.interface.build = function()
     ScootsCraft.interface.buildFooterLeft()
     ScootsCraft.interface.buildFooterRight()
     
-    ScootsCraft.tooltip = CreateFrame('GameTooltip', 'ScootsCraft-Tooltip', UIParent, 'GameTooltipTemplate')
-    ScootsCraft.tooltip:Hide()
-    
     ScootsCraft.setActiveSkill(skillIndex)
     
     ScootsCraft.frames.events:RegisterEvent('BAG_UPDATE')
