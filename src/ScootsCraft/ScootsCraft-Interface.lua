@@ -952,7 +952,7 @@ ScootsCraft.interface.buildFilterWindow = function()
                 ['framenamesuffix'] = 'Warforged',
                 ['name'] = 'Up to warforged',
                 ['value'] = 3,
-                ['tooltip'] = 'Only show equipment you have not attuned at all, or only attuned up to and including at a titanforged level.',
+                ['tooltip'] = 'Only show equipment you have not attuned at all, or only attuned up to and including at a warforged level.',
             },
             {
                 ['framenamesuffix'] = 'Lightforged',
