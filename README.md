@@ -2,22 +2,21 @@
 
 This is a complete overhaul of the professions system designed to drastically improve the experience.
 
-Comes bundled with a slightly modified AckisRecipeList so the scan button can be placed correctly.
-
 Features:
 * All professions integrated into a single panel.
 * Filters, collapsed sections, and scroll position is preserved between professions to ease switching between professions.
 * All Blizzard interface actions should be faithfully restored.
-* Additional filter for attuneable equipment (Unfiltered, attuneable (account), or attuneable (character)).
-* Additional filter for attuned forge level.
-* Additional filter to only show equipment.
-* Clicking on a reagent will show the craft for that reagent if it is from the same profession.
+* Additional filters to aid attuning everything.
+* Clicking on a reagent will show the craft for that reagent if it is craftable.
+* Generate a summary of materials required to complete a/all profession(s), influenced by your current filter values.
+* A "forge helper" system, to auto-sell/destroy crafted items if they fail to forge to the desired level.
 
 ## Usage ##
 
-* Open any profession to display the ScootsCraft panel.
-* Type `/scootscraft toggle` to switch between ScootsCraft and the default Blizzard profession system.
-* There are also buttons available to toggle this option.
+To open, either:
+* Type `/scootscraft`.
+* Left-click the minimap icon.
+* Configure a key-bind for "ScootsCraft / Toggle window" in the game Key Bindings menu.
 
 ## Installation ##
 
@@ -25,4 +24,6 @@ Download this repository, then extract the contents from the `src` directory int
 
 ## Screenshots ##
 
-![Screenshot of the interface](./img/ui-2.png)
+![Screenshot of the interface](./img/ScootsCraft-v2-craft.png)
+![Screenshot of the summary](./img/ScootsCraft-v2-summary.png)
+![Screenshot of the options](./img/ScootsCraft-v2-options.png)

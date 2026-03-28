@@ -1,884 +1,1042 @@
 ScootsCraft = {
     ['title'] = 'ScootsCraft',
+    ['version'] = '2.0.0',
     ['frames'] = {
-        ['events'] = CreateFrame('Frame', 'ScootsCraft-EventsFrame', UIParent)
+        ['events'] = CreateFrame('Frame', 'ScootsCraft-EventsFrame', UIParent),
     },
-    ['skillLevels'] = {},
-    ['cachedCrafts'] = {},
-    ['cachedCraftSections'] = {},
-    ['cachedEquipmentSlots'] = {},
-    ['hiddenSections'] = {},
-    ['filteredCrafts'] = {},
+    ['skills'] = {},
+    ['skillMap'] = {},
+    ['skillIndexMap'] = {},
+    ['inventorySlots'] = {},
+    ['sections'] = {},
+    ['sectionList'] = {},
+    ['filters'] = {},
     ['selectedCraft'] = {},
     ['scrollOffsets'] = {},
     ['defaultFilters'] = {
-        ['available'] = false,
-        ['equipment-only'] = false,
-        ['subclass'] = nil,
-        ['search'] = nil,
-        ['slot'] = nil,
-        ['equipment'] = nil,
-        ['forge'] = nil
+        ['search'] = '',
+        ['search-include-reagents'] = false,
+        ['have-materials'] = false,
+        ['exclude-items-in-bags'] = false,
+        ['attuneable'] = 'all',
+        ['attuned-level'] = 4,
+        ['section'] = nil,
+        ['inv-slot'] = -1,
     },
-    ['filters'] = {},
-    ['filterChoices'] = {
-        ['equipment'] = {
-            {nil, 'All Equipment'},
-            {'account', 'Attuneable (Acc)'},
-            {'character', 'Attuneable (Char)'},
-        },
-        ['forge'] = {
-            {nil, 'All Forge Levels'},
-            {-1, 'Unattuned'},
-            {0, '<= Baseline'},
-            {1, '<= Titanforged'},
-            {2, '<= Warforged'},
-            {3, '<= Lightforged'}
-        }
+    ['storage'] = {
+        ['options'] = {},
     },
-    ['cachedReagentCrafts'] = {},
-    ['runeforging'] = 53428
-}
-ScootsCraft.spellIds = {
-    {ScootsCraft.runeforging},                  -- Runeforging
-    {51304, 28596, 11611, 3464,  3101,  2259},  -- Alchemy
-    {51300, 29844, 9785,  3538,  3100,  2018},  -- Blacksmithing
-    {51313, 28029, 13920, 7413,  7412,  7411},  -- Enchanting
-    {51306, 30350, 12656, 4038,  4037,  4036},  -- Engineering
-    {45363, 45361, 45360, 45359, 45358, 45357}, -- Inscription
-    {51311, 28897, 28895, 28894, 25230, 25229}, -- Jewelcrafting
-    {51302, 32549, 10662, 3811,  3104,  2108},  -- Leatherworking
-    {2656},                                     -- Smelting
-    {51309, 26790, 12180, 3910,  3909,  3908},  -- Tailoring
-    {51296, 33359, 18260, 3413,  3102,  2550},  -- Cooking
-    {45542, 27028, 10846, 7924,  3274,  3273}   -- First Aid
+    ['triggeredEvents'] = {},
+    ['forgeHelper'] = nil,
+    ['forgeHelperItem'] = false,
+    ['forgeHelperQuantity'] = nil,
+    ['merchantOpen'] = false,
 }
 
-ScootsCraft.onLoad = function()
-    ScootsCraft.addonLoaded = true
-    ScootsCraft.lockedActive = ScootsCraft.getOption('active')
+BINDING_HEADER_ScootsCraft = ScootsCraft.title
+BINDING_NAME_SCOOTSCRAFT_TOGGLE_WINDOW = 'Toggle window'
+
+SLASH_SCOOTSCRAFT1 = '/scootscraft'
+SlashCmdList['SCOOTSCRAFT'] = function(...)
+    ScootsCraft.interface.toggle()
 end
 
-ScootsCraft.onHide = function()
-    ScootsCraft.cachedCrafts = {}
-    ScootsCraft.cachedCraftSections = {}
-    ScootsCraft.cachedEquipmentSlots = {}
-    ScootsCraft.filteredCrafts = {}
-    CloseTradeSkill()
+function ScootsCraft_Core_Init()
+    ScootsCraft.synastriaApiLoaded = true
 end
 
-ScootsCraft.onLogout = function()
-    if(ScootsCraft.optionsLoaded) then
-        _G['SCOOTSCRAFT_OPTIONS'] = ScootsCraft.options
-        ScootsCraft.closeCraftPanel()
+ScootsCraft.preInitChecks = function()
+    if(ScootsCraft.interface == nil
+    or ScootsCraft.data == nil
+    or ScootsCraft.options == nil
+    or ScootsCraft.synastriaApiLoaded ~= true) then
+        return false
     end
+
+    return true
 end
 
-ScootsCraft.openCraftPanel = function()
-    ScootsCraft.buildUi()
-    ScootsCraft.setAckisButton()
+ScootsCraft.preBuildChecks = function()
+    if(UnitAffectingCombat('player')) then
+        ScootsCraft.pushMessage('Please wait until you are out-of-combat before attempting to open ' .. ScootsCraft.title .. ' for the first time.')
+        return false
+    end
     
-    if(ScootsCraft.getOption('remember-filters') and not ScootsCraft.restoredRememberedFilters) then
-        ScootsCraft.restoredRememberedFilters = true
-        if(ScootsCraft.getOption('remembered-filter-data')) then
-            ScootsCraft.filters = ScootsCraft.getOption('remembered-filter-data')
+    if(not ScootsCraft.preInitChecks()) then
+        ScootsCraft.pushMessage('Please wait until the custom server API has finished loading before opening ' .. ScootsCraft.title .. '.')
+    end
+
+    return true
+end
+
+ScootsCraft.init = function()
+    ScootsCraft.cacheProfessions()
+    
+    local storage = _G['SCOOTSCRAFT_SAVEDDATA']
+    
+    if(storage ~= nil) then
+        if(storage.options ~= nil) then
+            ScootsCraft.storage.options = storage.options
+        end
+        
+        if(storage.lastActiveSkill ~= nil) then
+            ScootsCraft.storage.lastActiveSkill = storage.lastActiveSkill
         end
     end
     
-    ScootsCraft.frames.master:ClearAllPoints()
-    ScootsCraft.frames.master:SetPoint('TOPLEFT', UIParent, 'TOPLEFT', 0, -104)
-    
-    ShowUIPanel(ScootsCraft.frames.master)
-    
-    ScootsCraft.masterPanelOpen = true
-end
-
-ScootsCraft.closeCraftPanel = function()
-    if(ScootsCraft.uiBuilt) then
-        HideUIPanel(ScootsCraft.frames.master)
+    if(ScootsCraft.storage.lastActiveSkill ~= nil) then
+        ScootsCraft.activeSkill = ScootsCraft.storage.lastActiveSkill
     end
-    
-    ScootsCraft.masterPanelOpen = false
 end
 
-ScootsCraft.setProfessionButtons = function()
-    local offsetMulti = 0
-    
-    for spellIndex, spellIdCollection in ipairs(ScootsCraft.spellIds) do
-        local spellId = nil
-        for _, checkSpellId in ipairs(spellIdCollection) do
-            if(IsSpellKnown(checkSpellId)) then
-                spellId = checkSpellId
+ScootsCraft.cacheProfessions = function()
+    local skillIdMap = ScootsCraft.data.getProfessionMap()
+
+    for skillIndex = 1, #skillIdMap do
+        local skill = skillIdMap[skillIndex]
+        ScootsCraft.skills[skillIndex] = skillIdMap[skillIndex]
+        ScootsCraft.skillMap[skillIdMap[skillIndex].name] = skillIdMap[skillIndex].skillId
+        ScootsCraft.skillIndexMap[skillIdMap[skillIndex].skillId] = skillIndex
+        
+        if(ScootsCraft.filters[skill.skillId] == nil) then
+            ScootsCraft.filters[skill.skillId] = {}
+            for key, value in pairs(ScootsCraft.defaultFilters) do
+                ScootsCraft.filters[skill.skillId][key] = value
+            end
+        end
+        
+        local knowsSkill = false
+        for _, spellIdCheck in ipairs(ScootsCraft.skills[skillIndex].possibleSpellIds) do
+            if(IsSpellKnown(spellIdCheck)) then
+                knowsSkill = true
+                ScootsCraft.skills[skillIndex].spellId = spellIdCheck
                 break
             end
         end
         
-        if(spellId) then
-            local name, _, icon = GetSpellInfo(spellId)
-            ScootsCraft.professionSpells[spellIndex].id = spellId
-            ScootsCraft.professionSpells[spellIndex].name = name
-            ScootsCraft.professionSpells[spellIndex].icon = icon
+        if(knowsSkill) then
+            local name, _, icon = GetSpellInfo(ScootsCraft.skills[skillIndex].spellId)
             
-            ScootsCraft.professionSpells[spellIndex].button:SetAttribute('spell', spellId)
-            ScootsCraft.professionSpells[spellIndex].button:SetNormalTexture(icon)
-            
-            ScootsCraft.professionSpells[spellIndex].button:SetPoint('TOPLEFT', ScootsCraft.frames.professionButtonsHolder, 'TOPLEFT', (ScootsCraft.professionSpells[spellIndex].button:GetWidth() * offsetMulti), 0)
-            ScootsCraft.professionSpells[spellIndex].button:Show()
-            
-            offsetMulti = offsetMulti + 1
+            ScootsCraft.skills[skillIndex].displayName = name
+            ScootsCraft.skills[skillIndex].icon = icon
         end
     end
     
-    ScootsCraft.frames.professionButtonsHolder:SetWidth(ScootsCraft.professionSpells[1].button:GetWidth() * offsetMulti)
-    ScootsCraft.frames.professionButtonsHolder:SetPoint('TOPLEFT', ScootsCraft.frames.front, 'TOPLEFT', (670 - ScootsCraft.frames.professionButtonsHolder:GetWidth()), -42)
+    ScootsCraft.cacheSkillLevels()
 end
 
-ScootsCraft.renderProfession = function()
-    local professionName, currentSkill, maxSkill = GetTradeSkillLine()
-    
-    if(ScootsCraft.uiBuilt ~= true or professionName == 'UNKNOWN') then
-        HideUIPanel(ScootsCraft.frames.master)
-        return nil
-    end
-    
-    ScootsCraft.activeProfession = professionName
-    ScootsCraft.activeProfessionName = professionName
-    
-    -- Make the active profession button glow
-    ScootsCraft.setProfessionButtons()
-    for _, spell in pairs(ScootsCraft.professionSpells) do
-        spell.button.glow:SetAlpha(0)
-        spell.button:Enable()
+ScootsCraft.cacheSkillLevels = function()
+    for skillIndex, skill in pairs(ScootsCraft.skills) do
+        local internalSkillIndex = Custom_GetSkillIndex(skill.skillId)
+        local _, _, _, currentLevel, _, _, maxLevel = GetSkillLineInfo(internalSkillIndex)
         
-        if(spell.name == professionName or (spell.name == 'Smelting' and professionName == 'Mining')) then
-            spell.button.glow:SetVertexColor(0.8, 0.8, 0)
-            spell.button.glow:SetAlpha(1)
-            spell.button:Disable()
-            
-            ScootsCraft.activeProfession = spell.id
-            SetPortraitToTexture(ScootsCraft.frames.master.icon, spell.icon)
-        end
+        ScootsCraft.skills[skillIndex].currentLevel = currentLevel
+        ScootsCraft.skills[skillIndex].maxLevel = maxLevel
     end
-    
-    -- Set default filter values
-    if(ScootsCraft.filters[ScootsCraft.activeProfession] == nil) then
-        ScootsCraft.filters[ScootsCraft.activeProfession] = {}
-        
-        for key, value in pairs(ScootsCraft.defaultFilters) do
-            ScootsCraft.filters[ScootsCraft.activeProfession][key] = value
-        end
-    end
-    
-    -- Bring collapsed sections/scroll position from last time we were on this profession
-    if(ScootsCraft.hiddenSections[ScootsCraft.activeProfession] == nil) then
-        ScootsCraft.hiddenSections[ScootsCraft.activeProfession] = {}
-    end
-        
-    if(ScootsCraft.scrollOffsets[ScootsCraft.activeProfession] ~= nil) then
-        FauxScrollFrame_SetOffset(ScootsCraft.frames.recipeFrame, ScootsCraft.scrollOffsets[ScootsCraft.activeProfession])
-        ScootsCraft.frames.recipeFrame:SetVerticalScroll(ScootsCraft.scrollOffsets[ScootsCraft.activeProfession] * ScootsCraft.recipeLineHeight)
-    else
-        FauxScrollFrame_SetOffset(ScootsCraft.frames.recipeFrame, 0)
-        ScootsCraft.frames.recipeFrame:SetVerticalScroll(0)
-    end
-        
-    -- Setup filters
-    UIDropDownMenu_Initialize(ScootsCraft.frames.subclassFilter, ScootsCraft.setSubclassFilterValues)
-    UIDropDownMenu_Initialize(ScootsCraft.frames.slotFilter, ScootsCraft.setSlotFilterValues)
-    UIDropDownMenu_Initialize(ScootsCraft.frames.equipmentFilter, ScootsCraft.setEquipmentFilterValues)
-    UIDropDownMenu_Initialize(ScootsCraft.frames.forgeFilter, ScootsCraft.setForgeFilterValues)
-    
-    -- Set title up
-    ScootsCraft.frames.title.text:SetText(ScootsCraft.title .. ' - ' .. professionName .. ' [' .. tostring(currentSkill) .. ' / ' .. tostring(maxSkill) .. ']')
-    ScootsCraft.skillLevels[ScootsCraft.activeProfession] = {currentSkill, maxSkill}
-    ScootsCraft.frames.professionLink:SetPoint('LEFT', ScootsCraft.frames.title.text, 'RIGHT', 20, 0)
-    
-    -- Prepare profession
-    ScootsCraft.cacheProfession()
-
-    -- Apply filters from last time we viewed this profession
-    -- Available
-    ScootsCraft.frames.availableFilter:SetChecked(ScootsCraft.filters[ScootsCraft.activeProfession].available)
-    ScootsCraft.frames.availableFilter:Show()
-    
-    -- Equipment Only
-    ScootsCraft.frames.equipmentOnlyFilter:SetChecked(ScootsCraft.filters[ScootsCraft.activeProfession]['equipment-only'])
-    ScootsCraft.frames.equipmentOnlyFilter:Show()
-    
-    -- Subclass
-    if(ScootsCraft.filters[ScootsCraft.activeProfession].subclass) then
-        local index = 1
-        for sectionIndex, sectionName in ipairs(ScootsCraft.cachedCraftSections) do
-            index = index + 1
-            if(ScootsCraft.filters[ScootsCraft.activeProfession].subclass == sectionIndex) then
-                UIDropDownMenu_SetSelectedValue(ScootsCraft.frames.subclassFilter, index)
-                UIDropDownMenu_SetText(ScootsCraft.frames.subclassFilter, sectionName)
-                break
-            end
-        end
-    else
-        UIDropDownMenu_SetSelectedValue(ScootsCraft.frames.subclassFilter, 1)
-        UIDropDownMenu_SetText(ScootsCraft.frames.subclassFilter, 'All Subclasses')
-    end
-    ScootsCraft.frames.subclassFilter:Show()
-    
-    -- Slot
-    if(ScootsCraft.filters[ScootsCraft.activeProfession].slot) then
-        local index = 1
-        for slotName, _ in ipairs(ScootsCraft.cachedEquipmentSlots) do
-            index = index + 1
-            if(ScootsCraft.filters[ScootsCraft.activeProfession].slot == slotName) then
-                UIDropDownMenu_SetSelectedValue(ScootsCraft.frames.slotFilter, index)
-                UIDropDownMenu_SetText(ScootsCraft.frames.slotFilter, sectionName)
-                break
-            end
-        end
-    else
-        UIDropDownMenu_SetSelectedValue(ScootsCraft.frames.slotFilter, 1)
-        UIDropDownMenu_SetText(ScootsCraft.frames.slotFilter, 'All Slots')
-    end
-    ScootsCraft.frames.slotFilter:Show()    
-    
-    -- Search
-    if(ScootsCraft.filters[ScootsCraft.activeProfession].search) then
-        ScootsCraft.frames.searchFilter:SetText(ScootsCraft.filters[ScootsCraft.activeProfession].search)
-    else
-        ScootsCraft.frames.searchFilter:SetText('')
-    end
-    
-    if(ScootsCraft.frames.searchFilter:GetText() == '' and not ScootsCraft.searchFilterFocussed) then
-        ScootsCraft.frames.searchFilter.label:Show()
-    else
-        ScootsCraft.frames.searchFilter.label:Hide()
-    end
-    
-    -- Equipment
-    local index = 0
-    for _, choice in ipairs(ScootsCraft.filterChoices.equipment) do
-        index = index + 1
-        if(ScootsCraft.filters[ScootsCraft.activeProfession].equipment == choice[1]) then
-            UIDropDownMenu_SetSelectedValue(ScootsCraft.frames.equipmentFilter, index)
-            UIDropDownMenu_SetText(ScootsCraft.frames.equipmentFilter, choice[2])
-            break
-        end
-    end
-    ScootsCraft.frames.equipmentFilter:Show()
-    
-    -- Forge
-    local index = 0
-    for _, choice in ipairs(ScootsCraft.filterChoices.forge) do
-        index = index + 1
-        if(ScootsCraft.filters[ScootsCraft.activeProfession].forge == choice[1]) then
-            UIDropDownMenu_SetSelectedValue(ScootsCraft.frames.forgeFilter, index)
-            UIDropDownMenu_SetText(ScootsCraft.frames.forgeFilter, choice[2])
-            break
-        end
-    end
-    ScootsCraft.frames.forgeFilter:Show()
-    
-    -- Hide options if they're open
-    if(ScootsCraft.frames.options and ScootsCraft.frames.options:IsVisible()) then
-        ScootsCraft.frames.options:Hide()
-        ScootsCraft.frames.optionsButton:SetText('Options')
-    end
-    
-    -- Display it all
-    ScootsCraft.filterCrafts()
-    ScootsCraft.updateDisplayedRecipes()
-    ScootsCraft.setFrameLevels()
 end
 
-ScootsCraft.toggleSection = function(sectionIndex)
-    if(ScootsCraft.hiddenSections[ScootsCraft.activeProfession][sectionIndex]) then
-        ScootsCraft.hiddenSections[ScootsCraft.activeProfession][sectionIndex] = nil
-    else
-        ScootsCraft.hiddenSections[ScootsCraft.activeProfession][sectionIndex] = true
+ScootsCraft.shutdown = function()
+    _G['SCOOTSCRAFT_SAVEDDATA'] = ScootsCraft.storage
+end
+
+ScootsCraft.eventHandler = function(self, event)
+    if(event == 'BAG_UPDATE'
+    or event == 'ADDON_LOADED'
+    or event == 'SKILL_LINES_CHANGED') then
+        ScootsCraft.triggeredEvents[event] = true
+    elseif(event == 'MERCHANT_SHOW') then
+        ScootsCraft.merchantOpen = true
+    elseif(event == 'MERCHANT_CLOSED') then
+        ScootsCraft.merchantOpen = false
+    elseif(event == 'PLAYER_LOGOUT') then
+        ScootsCraft.shutdown()
+    end
+end
+
+ScootsCraft.updateLoop = function()
+    if(ScootsCraft.triggeredEvents['ADDON_LOADED'] ~= nil) then
+        if(ScootsCraft.preInitChecks()) then
+            ScootsCraft.triggeredEvents['ADDON_LOADED'] = nil
+            
+            if(ScootsCraft.initDone == nil) then
+                ScootsCraft.init()
+                ScootsCraft.options.load()
+                ScootsCraft.options.build()
+                ScootsCraft.interface.buildMinimapButton()
+                
+                ScootsCraft.initDone = true
+            end
+        end
+    end
+            
+    if(ScootsCraft.frames.master ~= nil and ScootsCraft.frames.master:IsVisible()) then
+        if(ScootsCraft.triggeredEvents['BAG_UPDATE'] ~= nil) then
+            local skillIndex = ScootsCraft.skillIndexMap[ScootsCraft.activeSkill]
+        
+            ScootsCraft.triggeredEvents['BAG_UPDATE'] = nil
+            ScootsCraft.frames.quantity:SetNumber(1)
+            ScootsCraft.cacheSkillLevels()
+            ScootsCraft.frames.title.skillName:SetText(string.format(' - %s [%d/%d]', ScootsCraft.skills[skillIndex].displayName, ScootsCraft.skills[skillIndex].currentLevel, ScootsCraft.skills[skillIndex].maxLevel))
+            ScootsCraft.refreshRecipeList()
+            ScootsCraft.renderRecipe(ScootsCraft.visibleSpellId)
+            
+            if(ScootsCraft.forgeHelper ~= nil and ScootsCraft.forgeHelperItem ~= nil) then
+                ScootsCraft.handleForgeHelper()
+            end
+        end
+        
+        if(ScootsCraft.triggeredEvents['SKILL_LINES_CHANGED'] ~= nil) then
+            ScootsCraft.triggeredEvents['SKILL_LINES_CHANGED'] = nil
+            ScootsCraft.cacheProfessions()
+            ScootsCraft.interface.buildProfessionSwatch()
+        end
+    end
+end
+
+ScootsCraft.setActiveSkill = function(skillIndex)
+    ScootsCraft.activeSkill = ScootsCraft.skills[skillIndex].skillId
+    
+    for _, button in pairs(ScootsCraft.frames.skillButtons) do
+        button:Enable()
+        button.activeGlow:SetAlpha(0)
     end
     
-    local anyVisible = false
-    for sectionIndex, _ in pairs(ScootsCraft.cachedCraftSections) do
-        if(ScootsCraft.hiddenSections[ScootsCraft.activeProfession][sectionIndex] == nil) then
-            anyVisible = true
-            break
+    ScootsCraft.frames.skillButtons[ScootsCraft.skills[skillIndex].name]:Disable()
+    ScootsCraft.frames.skillButtons[ScootsCraft.skills[skillIndex].name].activeGlow:SetVertexColor(0.8, 0.8, 0)
+    ScootsCraft.frames.skillButtons[ScootsCraft.skills[skillIndex].name].activeGlow:SetAlpha(1)
+    
+    ScootsCraft.frames.title.skillName:SetText(string.format(' - %s [%d/%d]', ScootsCraft.skills[skillIndex].displayName, ScootsCraft.skills[skillIndex].currentLevel, ScootsCraft.skills[skillIndex].maxLevel))
+    SetPortraitToTexture(ScootsCraft.frames.master.icon, ScootsCraft.skills[skillIndex].icon)
+    
+    --
+    
+    ScootsCraft.totalRecipeCount = 0
+    
+    ScootsCraft.inventorySlots = {}
+    local invSlotCheck = {}
+    
+    ScootsCraft.sectionList = {}
+    local sectionCheck = {}
+    
+    local recipes = Custom_GetProfessionRecipes(ScootsCraft.activeSkill)
+    local headerRewrites = ScootsCraft.data.getSectionRewrites()
+    local spellHeaderRewrites = ScootsCraft.data.getSpellSectionRewrites()
+    
+    for _, spellId in pairs(recipes) do
+        ScootsCraft.totalRecipeCount = ScootsCraft.totalRecipeCount + 1
+        local _, _, createdItemId, _, _, _, headerName = Custom_GetProfessionRecipeInfo(spellId)
+        
+        if(spellHeaderRewrites[ScootsCraft.activeSkill][spellId] ~= nil) then
+            headerName = spellHeaderRewrites[ScootsCraft.activeSkill][spellId]
+        elseif(headerRewrites[ScootsCraft.activeSkill][headerName] ~= nil) then
+            headerName = headerRewrites[ScootsCraft.activeSkill][headerName]
+        end
+        
+        if(headerName == nil) then
+            headerName = 'Unknown'
+        end
+        
+        if(sectionCheck[headerName] == nil) then
+            sectionCheck[headerName] = true
+            table.insert(ScootsCraft.sectionList, headerName)
+        end
+        
+        --
+        
+        if((createdItemId or 0) ~= 0) then
+            local invSlot = select(9, GetItemInfoCustom(createdItemId))
+            
+            if(invSlot == 'INVTYPE_ROBE') then
+                invSlot = 'INVTYPE_BODY'
+            end
+            
+            if((invSlot or '') ~= '' and sectionCheck[invSlot] == nil) then
+                sectionCheck[invSlot] = true
+                table.insert(ScootsCraft.inventorySlots, invSlot)
+            end
         end
     end
     
-    if(anyVisible) then
-        ScootsCraft.frames.allSectionsToggle:SetNormalTexture('Interface\\Buttons\\UI-MinusButton-Up')
-        ScootsCraft.frames.allSectionsToggle:SetPushedTexture('Interface\\Buttons\\UI-MinusButton-Down')
-    else
-        ScootsCraft.frames.allSectionsToggle:SetNormalTexture('Interface\\Buttons\\UI-PlusButton-Up')
-        ScootsCraft.frames.allSectionsToggle:SetPushedTexture('Interface\\Buttons\\UI-PlusButton-Down')
+    table.sort(ScootsCraft.sectionList, function(a, b)
+        if(a < b) then
+            return true
+        end
+        
+        return false
+    end)
+    
+    --
+    
+    ScootsCraft.interface.updateFilterDisplay()
+    ScootsCraft.refreshRecipeList()
+    ScootsCraft.setToggleAllSectionsVisibleState()
+    
+    ScootsCraft.renderRecipe(ScootsCraft.selectedCraft[ScootsCraft.activeSkill])
+    ScootsCraft.storage.lastActiveSkill = ScootsCraft.activeSkill
+end
+
+ScootsCraft.fetchRecipes = function(skillId)
+    local filters = ScootsCraft.filters[ScootsCraft.activeSkill] or ScootsCraft.defaultFilters
+
+    local includeFilter = bit.bor(
+        ScootsCraft.getFilter('attuneable') == 'character' and 1 or 0,
+        (ScootsCraft.getFilter('attuneable') == 'account' or ScootsCraft.getFilter('attuneable') == 'character') and 4 or 0,
+        ScootsCraft.getFilter('search-include-reagents') and 8 or 0,
+        ScootsCraft.getFilter('have-materials') and 0x20 or 0
+    )
+    
+    local excludeFilter = bit.bor(
+        ScootsCraft.getFilter('exclude-items-in-bags') and 0x10 or 0,
+        ScootsCraft.getFilter('attuned-level') ~= 4 and 0x40 or 0
+    )
+    
+    return Custom_GetProfessionRecipes(
+        skillId,
+        includeFilter,
+        excludeFilter,
+        -3, -- Sort flag
+        ScootsCraft.getFilter('search'),        
+        ScootsCraft.getFilter('attuned-level'), 
+        -1, -- Item class
+        -1, -- Item sub-class
+        ScootsCraft.getFilter('inv-slot')
+    )
+end
+
+ScootsCraft.refreshRecipeList = function()
+    ScootsCraft.recipes = {}
+    local recipes = ScootsCraft.fetchRecipes(ScootsCraft.activeSkill)
+    
+    local headersFlat = {}
+    
+    local headerRewrites = ScootsCraft.data.getSectionRewrites()
+    local spellHeaderRewrites = ScootsCraft.data.getSpellSectionRewrites()
+    
+    for spellIndex, spellId in ipairs(recipes) do
+        local headerName = select(7, Custom_GetProfessionRecipeInfo(spellId))
+        
+        if(spellHeaderRewrites[ScootsCraft.activeSkill][spellId] ~= nil) then
+            headerName = spellHeaderRewrites[ScootsCraft.activeSkill][spellId]
+        elseif(headerRewrites[ScootsCraft.activeSkill][headerName] ~= nil) then
+            headerName = headerRewrites[ScootsCraft.activeSkill][headerName]
+        end
+        
+        if(ScootsCraft.getFilter('section') == nil or ScootsCraft.getFilter('section') == headerName) then
+            table.insert(ScootsCraft.recipes, {
+                ['section'] = headerName,
+                ['spellId'] = spellId,
+                ['index'] = spellIndex,
+            })
+        end
     end
     
-    ScootsCraft.filterCrafts()
-    ScootsCraft.updateDisplayedRecipes()
+    local sectionsToTop = ScootsCraft.data.getSectionsPushedToTop()
+    
+    table.sort(ScootsCraft.recipes, function(a, b)
+        if(a ~= nil and b == nil) then
+            return true
+        elseif(a == nil and b ~= nil) then
+            return false
+        elseif(a == nil and b == nil) then
+            return false
+        end
+        
+        if(sectionsToTop[ScootsCraft.activeSkill][a.section] ~= nil and sectionsToTop[ScootsCraft.activeSkill][b.section] == nil) then
+            return true
+        elseif(sectionsToTop[ScootsCraft.activeSkill][a.section] == nil and sectionsToTop[ScootsCraft.activeSkill][b.section] ~= nil) then
+            return false
+        elseif(sectionsToTop[ScootsCraft.activeSkill][a.section] ~= nil and sectionsToTop[ScootsCraft.activeSkill][b.section] ~= nil) then
+            if(sectionsToTop[ScootsCraft.activeSkill][a.section] < sectionsToTop[ScootsCraft.activeSkill][b.section]) then
+                return true
+            elseif(sectionsToTop[ScootsCraft.activeSkill][a.section] > sectionsToTop[ScootsCraft.activeSkill][b.section]) then
+                return false
+            end
+        end
+        
+        if(a.section < b.section) then
+            return true
+        elseif(a.section > b.section) then
+            return false
+        end
+        
+        if(a.index < b.index) then
+            return true
+        end
+            
+        return false
+    end)
+    
+    if(ScootsCraft.sections[ScootsCraft.activeSkill] == nil) then
+        ScootsCraft.sections[ScootsCraft.activeSkill] = {}
+    end
+    
+    for craftIndex, recipe in ipairs(ScootsCraft.recipes) do
+        if(type(recipe) ~= 'string') then
+            if(headersFlat[recipe.section] == nil) then
+                headersFlat[recipe.section] = true
+                table.insert(ScootsCraft.recipes, craftIndex, recipe.section)
+                
+                if(ScootsCraft.sections[ScootsCraft.activeSkill][recipe.section] == nil) then
+                    ScootsCraft.sections[ScootsCraft.activeSkill][recipe.section] = true
+                end
+            end
+        end
+    end
+    
+    local recipesAfterReductions = 0
+    
+    for craftIndex = #ScootsCraft.recipes, 1, -1 do
+        if(type(ScootsCraft.recipes[craftIndex]) == 'table') then
+            if(ScootsCraft.sections[ScootsCraft.activeSkill][ScootsCraft.recipes[craftIndex].section] == true) then
+                recipesAfterReductions = recipesAfterReductions + 1
+            else
+                table.remove(ScootsCraft.recipes, craftIndex)
+            end
+        end
+    end
+    
+    ScootsCraft.frames.front.recipeCount:SetText(tostring(recipesAfterReductions) .. '/' .. tostring(ScootsCraft.totalRecipeCount))
+    
+    local offset = ScootsCraft.scrollOffsets[ScootsCraft.activeSkill]
+    
+    if(offset == nil) then
+        offset = 0
+    elseif(offset > (#ScootsCraft.recipes - ScootsCraft.recipesVisible)) then
+        offset = #ScootsCraft.recipes - ScootsCraft.recipesVisible
+        
+        if(offset < 0) then
+            offset = 0
+        end
+    end
+    
+    FauxScrollFrame_SetOffset(ScootsCraft.frames.recipeFrame, offset)
+    ScootsCraft.frames.recipeFrame:SetVerticalScroll(offset * ScootsCraft.recipeLineHeight)
+    
+    ScootsCraft.renderRecipeList()
+    ScootsCraft.setToggleAllSectionsVisibleState()
+end
+
+ScootsCraft.toggleSection = function(section)
+    ScootsCraft.sections[ScootsCraft.activeSkill][section] = not ScootsCraft.sections[ScootsCraft.activeSkill][section]
+    ScootsCraft.refreshRecipeList()
+    ScootsCraft.setToggleAllSectionsVisibleState()
 end
 
 ScootsCraft.toggleAllSections = function()
-    local hiddenAny = false
+    local targetValue = true
     
-    for sectionIndex, _ in pairs(ScootsCraft.cachedCraftSections) do
-        if(ScootsCraft.hiddenSections[ScootsCraft.activeProfession][sectionIndex] == nil) then
-            ScootsCraft.hiddenSections[ScootsCraft.activeProfession][sectionIndex] = true
-            hiddenAny = true
+    for _, value in pairs(ScootsCraft.sections[ScootsCraft.activeSkill]) do
+        if(value == true) then
+            targetValue = false
+            break
         end
     end
     
-    if(hiddenAny) then
-        ScootsCraft.frames.allSectionsToggle:SetNormalTexture('Interface\\Buttons\\UI-PlusButton-Up')
-        ScootsCraft.frames.allSectionsToggle:SetPushedTexture('Interface\\Buttons\\UI-PlusButton-Down')
+    for sectionIndex, _ in pairs(ScootsCraft.sections[ScootsCraft.activeSkill]) do
+        ScootsCraft.sections[ScootsCraft.activeSkill][sectionIndex] = targetValue
+    end
+    
+    ScootsCraft.setToggleAllSectionsVisibleState()
+    ScootsCraft.refreshRecipeList()
+end
+
+ScootsCraft.setToggleAllSectionsVisibleState = function()
+    local state = true
+    
+    for _, value in pairs(ScootsCraft.sections[ScootsCraft.activeSkill]) do
+        if(value == true) then
+            state = false
+            break
+        end
+    end
+    
+    if(state == false) then
+        ScootsCraft.frames.toggleAllSections:SetNormalTexture('Interface\\Buttons\\UI-MinusButton-Up')
+        ScootsCraft.frames.toggleAllSections:SetPushedTexture('Interface\\Buttons\\UI-MinusButton-Down')
     else
-        ScootsCraft.frames.allSectionsToggle:SetNormalTexture('Interface\\Buttons\\UI-MinusButton-Up')
-        ScootsCraft.frames.allSectionsToggle:SetPushedTexture('Interface\\Buttons\\UI-MinusButton-Down')
-        
-        for sectionIndex, _ in pairs(ScootsCraft.cachedCraftSections) do
-            ScootsCraft.hiddenSections[ScootsCraft.activeProfession][sectionIndex] = nil
-        end
-    end
-    
-    ScootsCraft.filterCrafts()
-    ScootsCraft.updateDisplayedRecipes()
-end
-
-ScootsCraft.cacheProfession = function()
-    local recipeCount = GetNumTradeSkills()
-    ScootsCraft.cachedCrafts = {}
-    ScootsCraft.cachedCraftSections = {}
-    ScootsCraft.cachedEquipmentSlots = {}
-    local sectionIndex = 0
-    
-    for skillIndex = 1, recipeCount do
-        local skillName, skillType, numAvailable, _, altVerb = GetTradeSkillInfo(skillIndex)
-        
-        if(skillType == 'header') then
-            sectionIndex = sectionIndex + 1
-            ScootsCraft.cachedCraftSections[sectionIndex] = skillName
-            ScootsCraft.cachedCrafts[sectionIndex] = {}
-        else
-            if(ScootsCraft.cachedCrafts[sectionIndex] == nil) then
-                sectionIndex = sectionIndex + 1
-                ScootsCraft.cachedCraftSections[sectionIndex] = 'Uncategorised'
-                ScootsCraft.cachedCrafts[sectionIndex] = {}
-            end
-        
-            local minMade, maxMade = GetTradeSkillNumMade(skillIndex)
-            
-            local craft = {
-                ['index'] = skillIndex,
-                ['section'] = sectionIndex,
-                ['name'] = skillName,
-                ['description'] = GetTradeSkillDescription(skillIndex),
-                ['type'] = skillType,
-                ['number'] = numAvailable,
-                ['verb'] = altVerb,
-                ['link'] = GetTradeSkillItemLink(skillIndex),
-                ['tradelink'] = GetTradeSkillRecipeLink(skillIndex),
-                ['icon'] = GetTradeSkillIcon(skillIndex),
-                ['slot'] = nil,
-                ['equippable'] = false,
-                ['min'] = minMade,
-                ['max'] = maxMade,
-                ['forge'] = -1,
-                ['attune'] = false,
-                ['attuneany'] = false,
-                ['requires'] = BuildColoredListString(GetTradeSkillTools(skillIndex)),
-                ['reagents'] = {},
-            }
-            
-            if(craft.link) then
-                local linkType, linkId = ScootsCraft.extractId(craft.link)
-                craft.id = linkId
-                craft.craftid = linkType .. '-' .. tostring(linkId)
-                craft.crafttype = linkType
-                
-                if(linkType == 'item') then
-                    craft.equippable = IsEquippableItem(craft.id)
-                    craft.slot = ScootsCraft.mapInvTypeToSlot(select(9, GetItemInfo(craft.link)))
-                elseif(linkType == 'spell') then
-                    craft.slot = ScootsCraft.mapSpellIdToSlot(linkId)
-                end
-            end
-            
-            if(craft.crafttype and craft.crafttype == 'item') then
-                if(GetItemAttuneForge and craft.id) then
-                    craft.forge = GetItemAttuneForge(craft.id)
-                end
-                
-                if(GetItemTagsCustom) then
-                    local tags = GetItemTagsCustom(craft.id)
-                    if(tags and bit.band(tags, 96) == 64) then
-                        if(CanAttuneItemHelper and CanAttuneItemHelper(craft.id) > 0) then
-                            craft.attune = true
-                            craft.attuneany = true
-                        elseif(IsAttunableBySomeone) then
-                            local check = IsAttunableBySomeone(craft.id)
-                            if(check ~= nil and check ~= 0) then
-                                craft.attuneany = true
-                            end
-                        end
-                    end
-                end
-            end
-            
-            local reagentCount = GetTradeSkillNumReagents(skillIndex)
-            
-            for reagentIndex = 1, reagentCount do
-                local reagentName, reagentTexture, reagentCount, playerReagentCount = GetTradeSkillReagentInfo(skillIndex, reagentIndex)
-                local reagent = {
-                    ['name'] = reagentName,
-                    ['icon'] = reagentTexture,
-                    ['required'] = reagentCount,
-                    ['owned'] = playerReagentCount,
-                    ['link'] = GetTradeSkillReagentItemLink(skillIndex, reagentIndex)
-                }
-                
-                craft.reagents[reagentIndex] = reagent
-            end
-            
-            if(craft.slot ~= nil) then
-                ScootsCraft.cachedEquipmentSlots[craft.slot] = true
-            end
-                
-            if(ScootsCraft.selectedCraft[ScootsCraft.activeProfession] and ScootsCraft.selectedCraft[ScootsCraft.activeProfession].craftid == craft.craftid) then
-                ScootsCraft.selectedCraft[ScootsCraft.activeProfession] = craft
-            end
-            
-            table.insert(ScootsCraft.cachedCrafts[sectionIndex], craft)
-        end
+        ScootsCraft.frames.toggleAllSections:SetNormalTexture('Interface\\Buttons\\UI-PlusButton-Up')
+        ScootsCraft.frames.toggleAllSections:SetPushedTexture('Interface\\Buttons\\UI-PlusButton-Down')
     end
 end
 
-ScootsCraft.filterCrafts = function()
-    ScootsCraft.filteredCrafts = {}
-    
-    local selectedCraftInFilter = false
-    
-    for sectionIndex, crafts in ipairs(ScootsCraft.cachedCrafts) do
-        table.insert(ScootsCraft.filteredCrafts, {
-            ['type'] = 'section',
-            ['detail'] = {
-                ['name'] = ScootsCraft.cachedCraftSections[sectionIndex],
-                ['index'] = sectionIndex
-            }
-        })
-        
-        local addedAny = false
-    
-        for _, craft in ipairs(crafts) do
-            repeat
-                if(ScootsCraft.activeProfession ~= ScootsCraft.runeforging) then
-                    -- Filter: Have Materials
-                    if(ScootsCraft.filters[ScootsCraft.activeProfession].available and craft.number < 1) then
-                        break
-                    end
-                end
-                    
-                -- Filter: Equipment Only
-                if(ScootsCraft.filters[ScootsCraft.activeProfession]['equipment-only'] and not craft.equippable) then
-                    break
-                end
-                
-                -- Filter: Subclass
-                if(ScootsCraft.filters[ScootsCraft.activeProfession].subclass) then
-                    if(sectionIndex ~= ScootsCraft.filters[ScootsCraft.activeProfession].subclass) then
-                        break
-                    end
-                end
-                
-                -- Filter: Slot
-                if(ScootsCraft.filters[ScootsCraft.activeProfession].slot) then
-                    if(craft.slot ~= ScootsCraft.filters[ScootsCraft.activeProfession].slot) then
-                        break
-                    end
-                end
-                
-                -- Filter: Equipment (attuneable)
-                if(ScootsCraft.filters[ScootsCraft.activeProfession].equipment and craft.equippable) then
-                    if(ScootsCraft.filters[ScootsCraft.activeProfession].equipment == 'account') then
-                        if(craft.attuneany ~= true) then
-                            break
-                        end
-                    elseif(ScootsCraft.filters[ScootsCraft.activeProfession].equipment == 'character') then
-                        if(craft.attune ~= true) then
-                            break
-                        end
-                    end
-                end
-                
-                -- Filter: Forge level
-                if(ScootsCraft.filters[ScootsCraft.activeProfession].forge) then
-                    if(craft.forge and craft.forge > ScootsCraft.filters[ScootsCraft.activeProfession].forge) then
-                        break
-                    end
-                end
-                
-                -- Filter: Search
-                if(ScootsCraft.filters[ScootsCraft.activeProfession].search) then
-                    if(not string.match(string.lower(ScootsCraft.getItemLinkTooltipAsString(craft.tradelink)), string.lower(ScootsCraft.filters[ScootsCraft.activeProfession].search))) then
-                        break
-                    end
-                end
-                
-                addedAny = true
-                
-                if(ScootsCraft.hiddenSections[ScootsCraft.activeProfession][sectionIndex]) then
-                    break
-                end
-                
-                table.insert(ScootsCraft.filteredCrafts, {
-                    ['type'] = 'craft',
-                    ['detail'] = craft
-                })
-            until true
-        end
-            
-        if(addedAny ~= true) then
-            table.remove(ScootsCraft.filteredCrafts)
-        end
-    end
-    
-    if(ScootsCraft.selectedCraft[ScootsCraft.activeProfession]) then
-        ScootsCraft.selectRecipe(ScootsCraft.selectedCraft[ScootsCraft.activeProfession])
-        return nil
-    end
-    
-    for _, craft in ipairs(ScootsCraft.filteredCrafts) do
-        if(craft.type == 'craft') then
-            ScootsCraft.selectRecipe(craft.detail)
-            return nil
-        end
-    end
-    
-    if(ScootsCraft.selectedCraft[ScootsCraft.activeProfession] == nil) then
-        ScootsCraft.frames.craftItem:Hide()
-    end
-end
+ScootsCraft.renderRecipeList = function()
+    local skillIndex = ScootsCraft.skillIndexMap[ScootsCraft.activeSkill]
 
-ScootsCraft.updateDisplayedRecipes = function()
-    if(ScootsCraft.filteredCrafts == nil) then
-        return nil
+    if(#ScootsCraft.recipes == 0) then
+        ScootsCraft.frames.toggleAllSections:Hide()
+    else
+        ScootsCraft.frames.toggleAllSections:Show()
     end
-    
-    FauxScrollFrame_Update(ScootsCraft.frames.recipeFrame, #ScootsCraft.filteredCrafts, ScootsCraft.recipesVisible, ScootsCraft.recipeLineHeight, nil, nil, nil, nil, nil, nil, true)
+
+    FauxScrollFrame_Update(ScootsCraft.frames.recipeFrame, #ScootsCraft.recipes, ScootsCraft.recipesVisible, ScootsCraft.recipeLineHeight, nil, nil, nil, nil, nil, nil, true)
     local offset = FauxScrollFrame_GetOffset(ScootsCraft.frames.recipeFrame)
     
-    ScootsCraft.scrollOffsets[ScootsCraft.activeProfession] = offset
+    ScootsCraft.scrollOffsets[ScootsCraft.activeSkill] = offset
     
     for i = 1, ScootsCraft.recipesVisible do
         local recipeIndex = i + offset
-        local recipe = ScootsCraft.filteredCrafts[recipeIndex]
         local frame = ScootsCraft.frames.recipes[i]
+        frame.icon:SetAlpha(0)
         
-        if(recipe == nil) then
-            frame:Hide()
-            frame.recipe = nil
-        else
-            frame:Show()
-            frame.icon:SetAlpha(0)
+        if(type(ScootsCraft.recipes[recipeIndex]) == 'string') then
+            -- Section header
+            local sectionName = ScootsCraft.recipes[recipeIndex]
             
-            if(recipe.type == 'section') then
-                frame.isSectionHead = true
-                frame.section = recipe.detail.index
-                frame.text:SetText(recipe.detail.name)
-                frame.text:SetTextColor(1, 1, 1)
-                frame.recipe = nil
-                frame.underline:SetAlpha(1)
-                frame.selected:SetAlpha(0)
-                frame.sectionToggle:Show()
-                
-                if(ScootsCraft.hiddenSections[ScootsCraft.activeProfession][frame.section]) then
-                    frame.sectionToggle:SetNormalTexture('Interface\\Buttons\\UI-PlusButton-Up')
-                    frame.sectionToggle:SetPushedTexture('Interface\\Buttons\\UI-PlusButton-Down')
-                else
-                    frame.sectionToggle:SetNormalTexture('Interface\\Buttons\\UI-MinusButton-Up')
-                    frame.sectionToggle:SetPushedTexture('Interface\\Buttons\\UI-MinusButton-Down')
-                end
+            frame:Show()
+            frame.recipe = nil
+            
+            frame.text:SetText(sectionName)
+            frame.text:SetTextColor(1, 1, 1)
+            frame.underline:SetAlpha(1)
+            frame.selected:SetAlpha(0)
+            frame.sectionToggle:Show()
+            frame.isSectionHead = true
+            frame.section = sectionName
+            frame.bounty:SetAlpha(0)
+            
+            if(ScootsCraft.sections[ScootsCraft.activeSkill][sectionName]) then
+                frame.sectionToggle:SetNormalTexture('Interface\\Buttons\\UI-MinusButton-Up')
+                frame.sectionToggle:SetPushedTexture('Interface\\Buttons\\UI-MinusButton-Down')
             else
-                frame.isSectionHead = false
-                frame.section = nil
-                frame.recipe = recipe.detail
+                frame.sectionToggle:SetNormalTexture('Interface\\Buttons\\UI-PlusButton-Up')
+                frame.sectionToggle:SetPushedTexture('Interface\\Buttons\\UI-PlusButton-Down')
+            end
+        elseif(type(ScootsCraft.recipes[recipeIndex]) == 'table') then
+            -- Craft
+            local recipe = ScootsCraft.recipes[recipeIndex]
+            local spellId = ScootsCraft.recipes[recipeIndex].spellId
+            
+            frame.isSectionHead = false
+            frame.section = nil
+            
+            if(recipe.spellId == nil) then
+                frame:Hide()
+                frame.recipe = nil
+            else
+                frame:Show()
+                frame.recipe = ScootsCraft.recipes[recipeIndex]
+                
                 frame.underline:SetAlpha(0)
                 frame.selected:SetAlpha(0)
                 frame.sectionToggle:Hide()
                 
-                if(ScootsCraft.selectedCraft[ScootsCraft.activeProfession] and recipe.detail.craftid == ScootsCraft.selectedCraft[ScootsCraft.activeProfession].craftid) then
+                local skillId, spellName, createdItemId, craftedItemCount, canCraftTimesNow, altVerb, headerName, levelUpDifficulty = Custom_GetProfessionRecipeInfo(recipe.spellId)
+                
+                if(levelUpDifficulty ~= 'trivial' and ScootsCraft.skills[skillIndex].currentLevel < ScootsCraft.skills[skillIndex].maxLevel) then
+                    frame.icon:SetTexture('Interface\\AddOns\\ScootsCraft\\Textures\\Craft-' .. (levelUpDifficulty:gsub('^%l', string.upper)))
+                    frame.icon:SetAlpha(1)
+                else
+                    frame.icon:SetAlpha(0)
+                end
+                
+                if(canCraftTimesNow and canCraftTimesNow > 0) then
+                    frame.text:SetText(spellName .. ' [' .. tostring(canCraftTimesNow) .. ']')
+                else
+                    frame.text:SetText(spellName)
+                end
+                
+                if(ScootsCraft.selectedCraft[ScootsCraft.activeSkill] and recipe.spellId == ScootsCraft.selectedCraft[ScootsCraft.activeSkill]) then
                     frame.selected:SetAlpha(0.3)
                 end
                 
-                if(recipe.detail.forge == 0) then
-                    frame.text:SetTextColor(0.65, 1, 0.5)
-                    frame.selected:SetVertexColor(0.65, 1, 0.5)
-                elseif(recipe.detail.forge == 1) then
-                    frame.text:SetTextColor(0.5, 0.5, 1)
-                    frame.selected:SetVertexColor(0.5, 0.5, 1)
-                elseif(recipe.detail.forge == 2) then
-                    frame.text:SetTextColor(1, 0.65, 0.5)
-                    frame.selected:SetVertexColor(1, 0.65, 0.5)
-                elseif(recipe.detail.forge == 3) then
-                    frame.text:SetTextColor(1, 1, 0.65)
-                    frame.selected:SetVertexColor(1, 1, 0.65)
+                if((createdItemId or 0) == 0) then
+                    frame.text:SetTextColor(0.5, 0.5, 0.5)
+                    frame.selected:SetVertexColor(0.5, 0.5, 0.5)
+                    frame.bounty:SetAlpha(0)
                 else
-                    if(recipe.detail.attune) then
-                        frame.text:SetTextColor(0.8, 0.8, 0.8)
-                        frame.selected:SetVertexColor(0.8, 0.8, 0.8)
-                    else
+                    local attuneable = CanAttuneItemHelper(createdItemId)
+                    local forgeLevel = GetItemAttuneForge(createdItemId)
+                    
+                    if(attuneable <= 0 and forgeLevel < 0) then
                         frame.text:SetTextColor(0.5, 0.5, 0.5)
                         frame.selected:SetVertexColor(0.5, 0.5, 0.5)
+                    else
+                        if(forgeLevel == 0) then
+                            frame.text:SetTextColor(0.65, 1, 0.5)
+                            frame.selected:SetVertexColor(0.65, 1, 0.5)
+                        elseif(forgeLevel == 1) then
+                            frame.text:SetTextColor(0.5, 0.5, 1)
+                            frame.selected:SetVertexColor(0.5, 0.5, 1)
+                        elseif(forgeLevel == 2) then
+                            frame.text:SetTextColor(1, 0.65, 0.5)
+                            frame.selected:SetVertexColor(1, 0.65, 0.5)
+                        elseif(forgeLevel == 3) then
+                            frame.text:SetTextColor(1, 1, 0.65)
+                            frame.selected:SetVertexColor(1, 1, 0.65)
+                        else
+                            frame.text:SetTextColor(0.8, 0.8, 0.8)
+                            frame.selected:SetVertexColor(0.8, 0.8, 0.8)
+                        end
+                    end
+                    
+                    if(GetCustomGameData(31, createdItemId) > 0) then
+                        frame.bounty:SetAlpha(1)
+                    else
+                        frame.bounty:SetAlpha(0)
                     end
                 end
-                
-                if(recipe.detail.type == nil or recipe.detail.type == 'trivial' or ScootsCraft.skillLevels[ScootsCraft.activeProfession][1] >= ScootsCraft.skillLevels[ScootsCraft.activeProfession][2]) then
-                    frame.icon:SetAlpha(0)
-                else
-                    frame.icon:SetTexture('Interface\\AddOns\\ScootsCraft\\Textures\\Craft-' .. recipe.detail.type)
-                    frame.icon:SetAlpha(1)
-                end
-                
-                local suffix = ''
-                if(recipe.detail.number and recipe.detail.number > 0) then
-                    suffix = ' [' .. recipe.detail.number .. ']'
-                end
-                frame.text:SetText(recipe.detail.name .. suffix)
             end
+        else
+            frame:Hide()
         end
     end
 end
 
-ScootsCraft.selectRecipe = function(craft)
-    ScootsCraft.selectedCraft[ScootsCraft.activeProfession] = craft
-    ScootsCraft.frames.craftIcon:SetNormalTexture(craft.icon)
+ScootsCraft.selectRecipe = function(spellId)
+    ScootsCraft.selectedCraft[ScootsCraft.activeSkill] = spellId
+    ScootsCraft.renderRecipe(spellId)
+    ScootsCraft.renderRecipeList()
+    ScootsCraft.frames.quantity:SetNumber(1)
+end
+
+ScootsCraft.renderRecipe = function(spellId)
+    if(spellId == nil) then
+        ScootsCraft.visibleSpellId = nil
     
-    local height = ScootsCraft.frames.craftIcon:GetHeight()
-    
-    if(craft.max > 1) then
-        if(craft.min == craft.max) then
-            ScootsCraft.frames.craftIcon.text:SetText(craft.min)
-        else
-            ScootsCraft.frames.craftIcon.text:SetText(craft.min .. '-' .. craft.max)
+        ScootsCraft.frames.craftItem:Hide()
+        ScootsCraft.frames.createButton:Disable()
+        ScootsCraft.frames.increment:Hide()
+        ScootsCraft.frames.quantity:Hide()
+        ScootsCraft.frames.decrement:Hide()
+        ScootsCraft.frames.createAllButton:Hide()
+        
+        for _, checkbox in pairs(ScootsCraft.frames.front.forgeHelper) do
+            checkbox:Hide()
         end
         
-        if(ScootsCraft.frames.craftIcon.text:GetWidth() > ScootsCraft.frames.craftIcon:GetWidth()) then
-            ScootsCraft.frames.craftIcon.text:SetText('~' .. math.floor((craft.min + craft.max) / 2))
-        end
-    else
-        ScootsCraft.frames.craftIcon.text:SetText('')
+        ScootsCraft.frames.front.forgeHelperTitle:Hide()
+        
+        return false
     end
     
-    ScootsCraft.frames.craftItem.name:SetText(craft.name)
+    ScootsCraft.visibleSpellId = spellId
+    ScootsCraft.frames.summaryFrame:Hide()
+    ScootsCraft.frames.craftItemScroller:Show()
+    ScootsCraft.frames.craftItem:Show()
+    ScootsCraft.frames.createButton:Enable()
+
+    local skillId, spellName, createdItemId, craftedItemCount, canCraftTimesNow, altVerb = Custom_GetProfessionRecipeInfo(spellId)
+    local height = 0
     
-    if(craft.requires) then
+    --
+    
+    ScootsCraft.frames.craftItem.canCraftText:SetText('Can craft: ' .. tostring(canCraftTimesNow))
+    ScootsCraft.frames.craftItem.spellIdText:SetText('Spell ID: ' .. tostring(spellId))
+    height = height + ScootsCraft.frames.craftItem.canCraftText:GetHeight()
+    
+    --
+    
+    local iconTexture
+    if((createdItemId or 0) ~= 0) then
+        iconTexture = GetItemIcon(createdItemId)
+    else
+        iconTexture = select(3, GetSpellInfo(spellId))
+    end
+    
+    ScootsCraft.frames.craftIcon:SetNormalTexture(iconTexture)
+    ScootsCraft.frames.craftIcon.spellId = spellId
+    height = height + ScootsCraft.frames.craftIcon:GetHeight() + 4
+    
+    local _, minCraft, maxCraft = Custom_GetSpellEffect(spellId, 0)
+    if(minCraft > 0 or maxCraft > 1) then
+        maxCraft = minCraft + maxCraft
+        minCraft = minCraft + 1
+        
+        if(maxCraft > minCraft) then
+            ScootsCraft.frames.craftIcon.text:SetText(string.format('%d-%d', minCraft, maxCraft))
+        else
+            ScootsCraft.frames.craftIcon.text:SetText(minCraft)
+        end
+    else
+        if(craftedItemCount > 1) then
+            ScootsCraft.frames.craftIcon.text:SetText(craftedItemCount)
+        else
+            ScootsCraft.frames.craftIcon.text:SetText('')
+        end
+    end
+    
+    --
+    
+    ScootsCraft.frames.craftItem.name:SetText(spellName)
+    
+    --
+    
+    local requires = ScootsCraft.parseRequirements(spellId)
+    if(requires) then
         ScootsCraft.frames.craftItem.requiresLabel:SetText('Requires:')
-        ScootsCraft.frames.craftItem.requires:SetText(craft.requires)
+        ScootsCraft.frames.craftItem.requires:SetText(requires)
     else
         ScootsCraft.frames.craftItem.requiresLabel:SetText('')
         ScootsCraft.frames.craftItem.requires:SetText('')
     end
     
-    local cooldown = GetTradeSkillCooldown(craft.index)
-    if(cooldown) then
-        ScootsCraft.frames.craftItem.cooldown:SetText('Cooldown remaining: ' .. SecondsToTime(cooldown))
+    --
+    
+    local cooldown = Custom_GetSpellCooldown(spellId)
+    if(cooldown > 0) then
+        ScootsCraft.frames.craftItem.cooldown:SetText('Cooldown remaining: ' .. SecondsToTime(math.ceil(cooldown / 1000)))
     else
         ScootsCraft.frames.craftItem.cooldown:SetText('')
     end
     
-    if(craft.description) then
+    --
+    
+    local description = Custom_GetSpellDesc(spellId, 5)
+    if(description) then
         ScootsCraft.frames.craftItem.description:SetPoint('TOPLEFT', ScootsCraft.frames.craftIcon, 'BOTTOMLEFT', 0, -10)
-        ScootsCraft.frames.craftItem.description:SetText(craft.description)
+        ScootsCraft.frames.craftItem.description:SetText(description)
         height = height + ScootsCraft.frames.craftItem.description:GetHeight() + 10
     else
         ScootsCraft.frames.craftItem.description:SetPoint('TOPLEFT', ScootsCraft.frames.craftIcon, 'BOTTOMLEFT', 0, 0)
         ScootsCraft.frames.craftItem.description:SetText('')
     end
     
-    ScootsCraft.frames.craftItem.reagentsLabel:Hide()
-    for i = 1, 8 do
-        local reagent = craft.reagents[i]
-
-        if(reagent and reagent.name and reagent.icon) then
-            if(i == 1) then
-                ScootsCraft.frames.craftItem.reagentsLabel:Show()
-                height = height + ScootsCraft.frames.craftItem.reagentsLabel:GetHeight() + 10 + ScootsCraft.frames.reagents[i]:GetHeight() + 3
-            elseif(i % 2 == 1) then
-                height = height + ScootsCraft.frames.reagents[i]:GetHeight() + 2
-            end
+    --
+    
+    local reagents = ScootsCraft.data.getRecipeReagents(spellId)
+    
+    for reagentIndex = 1, 8 do
+        local reagent = reagents[reagentIndex]
         
-            ScootsCraft.frames.reagents[i]:Show()
-            SetItemButtonTexture(ScootsCraft.frames.reagents[i], reagent.icon)
-            _G[ScootsCraft.frames.reagents[i]:GetName() .. 'Name']:SetText(reagent.name)
-            
-            if(reagent.link) then
-                local _, reagentItemId = ScootsCraft.extractId(reagent.link)
-                if(reagentItemId) then
-                    ScootsCraft.frames.reagents[i].itemId = reagentItemId
-                end
-            else
-                ScootsCraft.frames.reagents[i].itemId = nil
+        if(reagent == nil) then
+            ScootsCraft.frames.reagents[reagentIndex]:Hide()
+            ScootsCraft.frames.reagents[reagentIndex].itemId = nil
+        else
+            if(reagentIndex == 1) then
+                ScootsCraft.frames.craftItem.reagentsLabel:Show()
+                height = height + ScootsCraft.frames.craftItem.reagentsLabel:GetHeight() + 10 + ScootsCraft.frames.reagents[reagentIndex]:GetHeight() + 3
+            elseif(reagentIndex % 2 == 1) then
+                height = height + ScootsCraft.frames.reagents[reagentIndex]:GetHeight() + 2
             end
+            
+            ScootsCraft.frames.reagents[reagentIndex]:Show()
+            SetItemButtonTexture(ScootsCraft.frames.reagents[reagentIndex], GetItemIcon(reagent.itemId))
+            _G[ScootsCraft.frames.reagents[reagentIndex]:GetName() .. 'Name']:SetText((select(1, GetItemInfoCustom(reagent.itemId))))
+            ScootsCraft.frames.reagents[reagentIndex].itemId = reagent.itemId
             
             if(reagent.required <= reagent.owned) then
-                SetItemButtonTextureVertexColor(ScootsCraft.frames.reagents[i], 1, 1, 1)
-                _G[ScootsCraft.frames.reagents[i]:GetName() .. 'Name']:SetTextColor(HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b)
+                SetItemButtonTextureVertexColor(ScootsCraft.frames.reagents[reagentIndex], 1, 1, 1)
+                _G[ScootsCraft.frames.reagents[reagentIndex]:GetName() .. 'Name']:SetTextColor(HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b)
             else
-                SetItemButtonTextureVertexColor(ScootsCraft.frames.reagents[i], 0.5, 0.5, 0.5)
-                _G[ScootsCraft.frames.reagents[i]:GetName() .. 'Name']:SetTextColor(GRAY_FONT_COLOR.r, GRAY_FONT_COLOR.g, GRAY_FONT_COLOR.b)
+                SetItemButtonTextureVertexColor(ScootsCraft.frames.reagents[reagentIndex], 0.5, 0.5, 0.5)
+                _G[ScootsCraft.frames.reagents[reagentIndex]:GetName() .. 'Name']:SetTextColor(GRAY_FONT_COLOR.r, GRAY_FONT_COLOR.g, GRAY_FONT_COLOR.b)
             end
             
-            local reagentOwnedText = reagent.owned
+            local reagentOwnedText = tostring(reagent.owned)
             if(reagent.owned > 99) then
                 reagentOwnedText = '*'
             end
-            _G[ScootsCraft.frames.reagents[i]:GetName() .. 'Count']:SetText(reagentOwnedText .. ' /' .. reagent.required)
-        else
-            ScootsCraft.frames.reagents[i]:Hide()
+            _G[ScootsCraft.frames.reagents[reagentIndex]:GetName() .. 'Count']:SetText(reagentOwnedText .. ' /' .. tostring(reagent.required))
         end
     end
+    
+    --
     
     ScootsCraft.frames.craftItem:SetHeight(height)
     ScootsCraft.frames.craftItemHolder:SetHeight(height + 10)
     
-    ScootsCraft.frames.createButton:SetText(craft.verb or 'Create')
+    --
     
-    ScootsCraft.frames.createButton:Disable()
-    ScootsCraft.frames.quantity:Hide()
-    ScootsCraft.frames.increment:Hide()
-    ScootsCraft.frames.decrement:Hide()
-    ScootsCraft.frames.createAllButton:Hide()
-    
-    if(craft.number > 0 or ScootsCraft.activeProfession == ScootsCraft.runeforging) then
-        ScootsCraft.frames.createButton:Enable()
-        ScootsCraft.frames.quantity:SetText('1')
+    if(altVerb ~= nil) then
+        ScootsCraft.frames.createButton:SetText(altVerb)
+        ScootsCraft.frames.increment:Hide()
+        ScootsCraft.frames.quantity:Hide()
+        ScootsCraft.frames.decrement:Hide()
+        ScootsCraft.frames.createAllButton:Hide()
         
-        if(not craft.verb) then
-            ScootsCraft.frames.quantity:Show()
-            ScootsCraft.frames.increment:Show()
-            ScootsCraft.frames.decrement:Show()
-            ScootsCraft.frames.createAllButton:Show()
-            
-            if(craft.number == 1) then
-                ScootsCraft.frames.increment:Disable()
-            else
-                ScootsCraft.frames.increment:Enable()
+        for _, checkbox in pairs(ScootsCraft.frames.front.forgeHelper) do
+            checkbox:Hide()
+        end
+        
+        ScootsCraft.frames.front.forgeHelperTitle:Hide()
+    else
+        ScootsCraft.frames.createButton:SetText('Create')
+        ScootsCraft.frames.increment:Show()
+        ScootsCraft.frames.quantity:Show()
+        ScootsCraft.frames.decrement:Show()
+        ScootsCraft.frames.createAllButton:Show()
+        
+        if(ScootsCraft.data.getItemCanForge(createdItemId)) then
+            for _, checkbox in pairs(ScootsCraft.frames.front.forgeHelper) do
+                checkbox:Show()
             end
+            
+            ScootsCraft.frames.front.forgeHelperTitle:Show()
+        else
+            for _, checkbox in pairs(ScootsCraft.frames.front.forgeHelper) do
+                checkbox:Hide()
+            end
+            
+            ScootsCraft.frames.front.forgeHelperTitle:Hide()
         end
     end
-    
-    ScootsCraft.frames.craftItem:Show()
 end
 
-ScootsCraft.jumpToItemId = function(itemId)
-    if(not ScootsCraft.cachedReagentCrafts[ScootsCraft.activeProfession]) then
-        ScootsCraft.cachedReagentCrafts[ScootsCraft.activeProfession] = {}
+ScootsCraft.parseRequirements = function(spellId)
+    local _, focusName, _, areaName, _, totemOneName, _, totemTwoName, _, totemOneCatName, _, totemTwoCatName = Custom_GetSpellTools(spellId)
+    local output = {}
+    
+    if(focusName) then
+        table.insert(output, focusName)
     end
     
-    if(ScootsCraft.cachedReagentCrafts[itemId] ~= nil) then
-        if(ScootsCraft.cachedReagentCrafts[itemId] ~= false) then
-            ScootsCraft.selectRecipe(ScootsCraft.cachedReagentCrafts[ScootsCraft.activeProfession][itemId])
-            ScootsCraft.updateDisplayedRecipes()
-        end
-        
+    if(areaName) then
+        table.insert(output, areaName)
+    end
+    
+    if(totemOneName) then
+        table.insert(output, totemOneName)
+    end
+    
+    if(totemTwoName) then
+        table.insert(output, totemTwoName)
+    end
+    
+    if(totemOneCatName) then
+        table.insert(output, totemOneCatName)
+    end
+    
+    if(totemTwoCatName) then
+        table.insert(output, totemTwoCatName)
+    end
+    
+    if(#output == 0) then
         return nil
+    else
+        return table.concat(output, ', ')
+    end
+end
+
+ScootsCraft.generateSummary = function(skillId)
+    ScootsCraft.selectRecipe(nil)
+    
+    local bagContents = {}
+    if(ScootsCraft.options.get('discount-summaries')) then
+        local bagContents = ScootsCraft.data.getBagContents()
     end
     
-    for _, crafts in pairs(ScootsCraft.cachedCrafts) do
-        for _, craft in pairs(crafts) do
-            if(craft.crafttype == 'item' and craft.id == itemId) then
-                ScootsCraft.cachedReagentCrafts[ScootsCraft.activeProfession][itemId] = craft
-                ScootsCraft.selectRecipe(craft)
-                ScootsCraft.updateDisplayedRecipes()
-                return nil
+    local reagentCosts = {}
+    
+    local recipes = ScootsCraft.fetchRecipes(skillId or -1)
+    
+    for _, spellId in pairs(recipes) do
+        local reagents = Custom_GetProfessionRecipeReagents(spellId)
+        
+        for itemId, itemCount in pairs(reagents) do
+            if(reagentCosts[itemId] == nil) then
+                reagentCosts[itemId] = itemCount
+            else
+                reagentCosts[itemId] = reagentCosts[itemId] + itemCount
             end
         end
     end
     
-    ScootsCraft.cachedReagentCrafts[ScootsCraft.activeProfession][itemId] = false
+    local doReduction = true
+    while doReduction do
+        reagentCosts, doReduction = ScootsCraft.reduceSummary(reagentCosts, bagContents)
+    end
+
+    ScootsCraft.summary = {}
+    
+    for itemId, itemCount in pairs(reagentCosts) do
+        if(itemCount > 0) then
+            table.insert(ScootsCraft.summary, {
+                ['itemId'] = itemId,
+                ['count'] = itemCount,
+            })
+        end
+    end
+    
+    table.sort(ScootsCraft.summary, function(a, b)
+        return a.count > b.count
+    end)
+    
+    ScootsCraft.renderSummary()
+end
+
+ScootsCraft.reduceSummary = function(reagents, bagContents)
+    local didReduction = false
+    local newReagents = {}
+    local exclusions = ScootsCraft.data.getSummaryReductionExclusions()
+    
+    for itemId, _ in pairs(reagents) do
+        if(reagents[itemId] > 0 and exclusions[itemId] == nil) then
+            local spellId = Custom_GetProfessionRecipeFromCraftedItem(itemId)
+            
+            if(spellId ~= nil) then
+                if(ScootsCraft.options.get('discount-summaries')) then
+                    local bankOwned = GetCustomGameData(13, itemId) or 0
+                    reagents[itemId] = reagents[itemId] - (bankOwned + (bagContents[itemId] or 0))
+                end
+                
+                if(reagents[itemId] > 0) then
+                    didReduction = true
+                    
+                    local subReagents = Custom_GetProfessionRecipeReagents(spellId)
+                    
+                    for subItemId, subItemCount in pairs(subReagents) do
+                        if(newReagents[subItemId] == nil) then
+                            newReagents[subItemId] = (subItemCount * reagents[itemId])
+                        else
+                            newReagents[subItemId] = newReagents[subItemId] + (subItemCount * reagents[itemId])
+                        end
+                    end
+                    
+                    reagents[itemId] = 0
+                end
+            end
+        end
+    end
+    
+    if(didReduction == true) then
+        for itemId, itemCount in pairs(newReagents) do
+            if(reagents[itemId] == nil) then
+                reagents[itemId] = itemCount
+            else
+                reagents[itemId] = reagents[itemId] + itemCount
+            end
+        end
+    elseif(ScootsCraft.options.get('discount-summaries')) then
+        for itemId, _ in pairs(reagents) do
+            if(reagents[itemId] > 0) then
+                local bankOwned = GetCustomGameData(13, itemId) or 0
+                reagents[itemId] = reagents[itemId] - (bankOwned + (bagContents[itemId] or 0))
+            end
+        end
+    end
+    
+    return reagents, didReduction
+end
+
+ScootsCraft.renderSummary = function()
+    ScootsCraft.frames.craftItemScroller:Hide()
+    ScootsCraft.frames.summaryFrame:Show()
+    
+    FauxScrollFrame_Update(ScootsCraft.frames.summaryFrame, #ScootsCraft.summary, ScootsCraft.summaryLinesVisible, ScootsCraft.summaryLineHeight, nil, nil, nil, nil, nil, nil, true)
+    local offset = FauxScrollFrame_GetOffset(ScootsCraft.frames.summaryFrame)
+    
+    for i = 1, ScootsCraft.summaryLinesVisible do
+        local summaryLine = ScootsCraft.summary[i + offset]
+        local frame = ScootsCraft.frames.summaryLines[i]
+        
+        if(summaryLine == nil) then
+            frame:Hide()
+        else
+            frame:Show()
+            
+            frame.icon:SetTexture(GetItemIcon(summaryLine.itemId))
+            frame.leftText:SetText(ScootsCraft.getItemLink(summaryLine.itemId))
+            frame.rightText:SetText(summaryLine.count)
+            frame.itemId = summaryLine.itemId
+        end
+    end
+end
+
+ScootsCraft.craftItem = function()
+    EditBox_ClearFocus(ScootsCraft.frames.quantity)
+    
+    local quantity = ScootsCraft.frames.quantity:GetNumber()
+    if(not ScootsCraft.frames.quantity:IsVisible()) then
+        quantity = 1
+    end
+    
+    if(ScootsCraft.forgeHelper ~= nil) then
+        local _, _, createdItemId, _, _, altVerb = Custom_GetProfessionRecipeInfo(ScootsCraft.visibleSpellId)
+        
+        if(altVerb == nil and ScootsCraft.data.getItemCanForge(createdItemId)) then
+            ScootsCraft.forgeHelperItem = createdItemId
+            ScootsCraft.forgeHelperQuantity = quantity
+        end
+    end
+    
+    Custom_DoProfessionRecipe(ScootsCraft.visibleSpellId, quantity)
+end
+
+ScootsCraft.handleForgeHelper = function()
+    for bagIndex = 0, 4 do
+        local bagSlots = GetContainerNumSlots(bagIndex)
+        
+        for slotIndex = 1, bagSlots do
+            local _, bagItemCount, _, _, _, _, bagItemLink = GetContainerItemInfo(bagIndex, slotIndex)
+            
+            if(bagItemLink ~= nil) then
+                local bagItemId = CustomExtractItemId(bagItemLink)
+                
+                if(bagItemId == ScootsCraft.forgeHelperItem) then
+                    if(GetItemLinkTitanforge(bagItemLink) >= ScootsCraft.forgeHelper) then
+                        ScootsCraft.forgeHelperItem = nil
+                    else
+                        if(ScootsCraft.merchantOpen) then
+                            UseContainerItem(bagIndex, slotIndex)
+                        else
+                            PickupContainerItem(bagIndex, slotIndex)
+                            DeleteCursorItem()
+                        end
+                    end
+                end
+            end
+        end
+    end
+    
+    if(ScootsCraft.forgeHelperItem ~= nil) then
+        ScootsCraft.frames.quantity:SetNumber(ScootsCraft.forgeHelperQuantity)
+    end
+end
+
+ScootsCraft.handleReagentJump = function(itemId)
+    local spellId = Custom_GetProfessionRecipeFromCraftedItem(itemId)
+    
+    if(spellId ~= nil) then
+        local skillId = Custom_GetProfessionRecipeInfo(spellId)
+        
+        if(skillId) then
+            local recipes = Custom_GetProfessionRecipes(skillId)
+            
+            for recipeIndex = 1, #recipes do
+                if(recipes[recipeIndex] == spellId) then
+                    ScootsCraft.renderRecipe(spellId)
+                    break
+                end
+            end
+        end
+    end
 end
 
 ScootsCraft.setFilter = function(key, value)
-    if(type(value) == 'string' and value == '') then
-        value = nil
+    ScootsCraft.filters[ScootsCraft.activeSkill][key] = value
+    ScootsCraft.refreshRecipeList()
+end
+
+ScootsCraft.getFilter = function(key)
+    if(ScootsCraft.filters[ScootsCraft.activeSkill] == nil or ScootsCraft.filters[ScootsCraft.activeSkill][key] == nil) then
+        return ScootsCraft.defaultFilters[key]
     end
     
-    ScootsCraft.filters[ScootsCraft.activeProfession][key] = value
-    ScootsCraft.setOption('remembered-filter-data', ScootsCraft.filters)
-    ScootsCraft.filterCrafts()
-    ScootsCraft.updateDisplayedRecipes()
+    return ScootsCraft.filters[ScootsCraft.activeSkill][key]
 end
 
-ScootsCraft.toggleOptions = function()
-    if(not ScootsCraft.frames.options) then
-        ScootsCraft.buildUiOptions()
-        ScootsCraft.frames.options:Hide()
-    end
-    
-    if(ScootsCraft.frames.options:IsVisible()) then
-        ScootsCraft.frames.options:Hide()
-        ScootsCraft.frames.optionsButton:SetText('Options')
-    else
-        ScootsCraft.frames.options:Show()
-        ScootsCraft.frames.optionsButton:SetText('Close')
-        ScootsCraft.setFrameLevels()
-    end
+ScootsCraft.pushMessage = function(message)
+    print('\124cff' .. '98fb98' .. ScootsCraft.title .. ' ' .. ScootsCraft.version .. '\124r')
+    print(message)
 end
 
-StaticPopupDialogs['SCOOTSCRAFT_RELOAD'] = {
-    ['text'] = 'This action requires reloading the UI to take effect. Reload now?',
-    ['button1'] = 'Yes',
-    ['button2'] = 'No',
-    ['OnAccept'] = ReloadUI,
-    ['timeout'] = 0,
-    ['whileDead'] = true,
-    ['hideOnEscape'] = true
-}
+ScootsCraft.getCraftingLink = function(spellId)
+    local skillId, spellName = Custom_GetProfessionRecipeInfo(spellId)
 
-SLASH_SCOOTSCRAFT1 = '/scootscraft'
-SlashCmdList['SCOOTSCRAFT'] = function(...)
-    local arg1 = select(1, ...)
-    if(arg1 and string.lower(arg1) == 'toggle') then
-        ScootsCraft.setOption('active', not ScootsCraft.options.active)
-        StaticPopup_Show('SCOOTSCRAFT_RELOAD')
-    else
-        print('\124cff' .. '98fb98' .. ScootsCraft.title .. '\124r' .. ' usage:')
-        print('\124cff' .. '98fb98' .. '/scootscraft toggle' .. '\124r' .. ' - Activates or deactivates' .. ScootsCraft.title .. '.')
-    end
+    return string.format('|cffffd000|Henchant:%d|h[%s: %s]|h|r', spellId, ScootsCraft.skills[ScootsCraft.skillIndexMap[skillId]].displayName, spellName)
 end
 
-ScootsCraft.eventHandler = function(self, event, arg1)
-    if(event == 'ADDON_LOADED' and arg1 == 'ScootsCraft') then
-        ScootsCraft.onLoad()
-    elseif(event == 'PLAYER_LOGOUT') then
-        ScootsCraft.onLogout()
-    elseif(event == 'PLAYER_LEAVING_WORLD') then
-        ScootsCraft.closeCraftPanel()
-    elseif(event == 'TRADE_SKILL_SHOW' or event == 'TRADE_SKILL_UPDATE') then
-        if(ScootsCraft.lockedActive ~= true) then
-            ScootsCraft.addEnableButton()
-        else
-            ScootsCraft.buildUpdate = true
-        end
-    elseif(event == 'TRADE_SKILL_CLOSE') then
-        if(ScootsCraft.lockedActive) then
-            ScootsCraft.closeCraftPanel()
-        end
-    end
+ScootsCraft.getItemLink = function(itemId)
+    return (select(2, GetItemInfoCustom(itemId)))
 end
 
-ScootsCraft.updateLoop = function()
-    if(ScootsCraft.buildUpdate) then
-        ScootsCraft.buildUpdate = false
-        if(ScootsCraft.masterPanelOpen ~= true) then
-            ScootsCraft.openCraftPanel()
-        end
-        ScootsCraft.renderProfession()
-    end
-end
-
-ScootsCraft.frames.events:SetScript('OnEvent', ScootsCraft.eventHandler)
 ScootsCraft.frames.events:SetScript('OnUpdate', ScootsCraft.updateLoop)
+ScootsCraft.frames.events:SetScript('OnEvent', ScootsCraft.eventHandler)
 
 ScootsCraft.frames.events:RegisterEvent('ADDON_LOADED')
 ScootsCraft.frames.events:RegisterEvent('PLAYER_LOGOUT')
-ScootsCraft.frames.events:RegisterEvent('TRADE_SKILL_SHOW')
-ScootsCraft.frames.events:RegisterEvent('TRADE_SKILL_UPDATE')
-ScootsCraft.frames.events:RegisterEvent('TRADE_SKILL_CLOSE')
-ScootsCraft.frames.events:RegisterEvent('PLAYER_LEAVING_WORLD')
+ScootsCraft.frames.events:RegisterEvent('SKILL_LINES_CHANGED')
+ScootsCraft.frames.events:RegisterEvent('MERCHANT_SHOW')
+ScootsCraft.frames.events:RegisterEvent('MERCHANT_CLOSED')
+
+SynastriaSafeInvoke('ScootsCraft_Core_Init')
