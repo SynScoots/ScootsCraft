@@ -128,10 +128,12 @@ end
 ScootsCraft.cacheSkillLevels = function()
     for skillIndex, skill in pairs(ScootsCraft.skills) do
         local internalSkillIndex = Custom_GetSkillIndex(skill.skillId)
-        local _, _, _, currentLevel, _, _, maxLevel = GetSkillLineInfo(internalSkillIndex)
-        
-        ScootsCraft.skills[skillIndex].currentLevel = currentLevel
-        ScootsCraft.skills[skillIndex].maxLevel = maxLevel
+        if ScootsCraft.skills[skillIndex].spellId ~= nil then
+            local _, _, _, currentLevel, _, _, maxLevel = GetSkillLineInfo(internalSkillIndex)
+            
+            ScootsCraft.skills[skillIndex].currentLevel = currentLevel
+            ScootsCraft.skills[skillIndex].maxLevel = maxLevel
+        end
     end
 end
 
