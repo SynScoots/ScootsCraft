@@ -22,6 +22,8 @@ ScootsCraft.options.load = function()
         },
     }
     
+    ScootsCraft.storage.options = ScootsCraft.storage.options or {}
+    
     local options = {}
     
     for name, defaultValue in pairs(defaultOptions) do
@@ -70,8 +72,11 @@ ScootsCraft.options.get = function(optionName)
 end
 
 ScootsCraft.options.set = function(optionName, optionValue)
-    if(ScootsCraft.storage == nil
-    or ScootsCraft.storage.options == nil) then
+    if(ScootsCraft.storage == nil) then
+        ScootsCraft.storage = {}
+    end
+    
+    if(ScootsCraft.storage.options == nil) then
         ScootsCraft.storage.options = {}
     end
     
@@ -97,6 +102,8 @@ ScootsCraft.options.build = function()
         if(ScootsCraft.options.built ~= nil) then
             return nil
         end
+        
+        InterfaceOptionsFrame:SetWidth(math.max(900, InterfaceOptionsFrame:GetWidth()))
         
         ScootsCraft.frames.optionsScrollFrame = CreateFrame('ScrollFrame', 'ScootsCraft-Options-ScrollFrame', ScootsCraft.frames.options, 'UIPanelScrollFrameTemplate')
         ScootsCraft.frames.optionsScrollFrame:SetWidth(663)
