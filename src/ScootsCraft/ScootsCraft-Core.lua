@@ -1,3 +1,7 @@
+-- TODO:
+--  Forgehelper post-forge destroy/vendor unforged fix
+--  Options to add special cloth to summary reduction exclusions
+
 ScootsCraft = {
     ['title'] = 'ScootsCraft',
     ['version'] = '2.0.0',
@@ -776,28 +780,17 @@ ScootsCraft.parseRequirements = function(spellId)
     local _, focusName, _, areaName, _, totemOneName, _, totemTwoName, _, totemOneCatName, _, totemTwoCatName = Custom_GetSpellTools(spellId)
     local output = {}
     
-    if(focusName) then
-        table.insert(output, focusName)
-    end
-    
-    if(areaName) then
-        table.insert(output, areaName)
-    end
-    
-    if(totemOneName) then
-        table.insert(output, totemOneName)
-    end
-    
-    if(totemTwoName) then
-        table.insert(output, totemTwoName)
-    end
-    
-    if(totemOneCatName) then
-        table.insert(output, totemOneCatName)
-    end
-    
-    if(totemTwoCatName) then
-        table.insert(output, totemTwoCatName)
+    for _, requirement in pairs({
+        focusName,
+        areaName,
+        totemOneName,
+        totemTwoName,
+        totemOneCatName,
+        totemTwoCatName,
+    }) do
+        if(requirement ~= nil) then
+            table.insert(output, requirement)
+        end
     end
     
     if(#output == 0) then
@@ -965,6 +958,7 @@ ScootsCraft.handleForgeHelper = function()
                 if(bagItemId == ScootsCraft.forgeHelperItem) then
                     if(GetItemLinkTitanforge(bagItemLink) >= ScootsCraft.forgeHelper) then
                         ScootsCraft.forgeHelperItem = nil
+                        -- TODO: insert a delay to vendor unforged here
                     else
                         if(ScootsCraft.merchantOpen) then
                             UseContainerItem(bagIndex, slotIndex)
