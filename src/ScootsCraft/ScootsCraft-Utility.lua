@@ -151,6 +151,43 @@ utility = {
         
         return true
     end,
+    ['craftingTooltipContains'] = function(spellId, searchString)
+        if(storage.tooltipCache[spellId] == nil) then
+            if(utility.scanTooltip == nil) then
+                utility.scanTooltip = CreateFrame('GameTooltip', 'ScootsCraft-ScanTooltip', UIParent, 'GameTooltipTemplate')
+            end
+            
+            utility.scanTooltip:SetOwner(UIParent)
+            utility.scanTooltip:ClearLines()
+            
+            local itemId = select(3, Custom_GetProfessionRecipeInfo(spellId))
+            
+            if((itemId or 0) ~= 0) then
+                utility.scanTooltip:SetHyperlink(utility.getItemLink(itemId))
+            else
+                utility.scanTooltip:SetHyperlink(utility.getCraftingLink(spellId))
+            end
+            
+            utility.scanTooltip:Show()
+            
+            storage.tooltipCache[spellId] = ''
+            local tooltipLines = {utility.scanTooltip:GetRegions()}
+            
+            for _, line in ipairs(tooltipLines) do
+                if(line:IsObjectType('FontString')) then
+                    local text = line:GetText()
+                    
+                    if(text) then
+                        storage.tooltipCache[spellId] = storage.tooltipCache[spellId] .. string.lower(text)
+                    end
+                end
+            end
+            
+            utility.scanTooltip:Hide()
+        end
+        
+        return storage.tooltipCache[spellId]:match(string.lower(searchString)) ~= nil
+    end,
 }
 
 for funcName, func in pairs(utility) do

@@ -11,12 +11,17 @@ options = {
         ['minimap-button'] = true,
         ['drag-window'] = true,
         ['recipe-list-tooltip'] = 'none',
+        ['select-next-on-hide'] = false,
         ['discount-summaries'] = true,
+        ['reduce-wotlk-cloth'] = false,
+        ['reduce-tbc-cloth'] = false,
+        ['reduce-primal-might'] = false,
     },
     ['defaultFiltersValues'] = {
         ['search'] = '',
         ['search-include-reagents'] = false,
-        ['have-materials'] = false,
+        ['search-include-tooltip'] = false,
+        ['minimum-quantity'] = 0,
         ['exclude-items-in-bags'] = false,
         ['attuneable'] = 'all',
         ['attuned-level'] = 4,
@@ -130,6 +135,12 @@ options = {
                 ['description'] = nil,
                 ['callback'] = options.defineGeneralOptions,
             },
+            ['summary'] = {
+                ['framename'] = 'ScootsCraft-Options-Summary',
+                ['title'] = 'Summary options',
+                ['description'] = nil,
+                ['callback'] = options.defineSummaryOptions,
+            },
         }
         
         for _, skill in ipairs(lookup.professionMap) do
@@ -197,11 +208,87 @@ options = {
                 },
             },
             {
+                ['key'] = 'select-next-on-hide',
+                ['type'] = 'checkbox',
+                ['framename'] = 'SelectNextOnHide',
+                ['label'] = 'Select next recipe when current is hidden',
+                ['tooltip'] = 'With this option enabled, when your currently selected recipe gets hidden by filters, the next recipe will automatically be selected.',
+            },
+        }
+        
+        for _, field in ipairs(fieldList) do
+            field.framename = string.format('%s-%s', data.framename, field.framename)
+        end
+        
+        return fieldList
+    end,
+    ['defineSummaryOptions'] = function(data)
+        local fieldList = {
+            {
                 ['key'] = 'discount-summaries',
                 ['type'] = 'checkbox',
                 ['framename'] = 'DiscountSummaries',
                 ['label'] = 'Discount summaries by owned reagents',
                 ['tooltip'] = 'With this option enabled, profession summaries have their counts reduced by reagents you already have.',
+            },
+            {
+                ['key'] = 'reduce-wotlk-cloth',
+                ['type'] = 'checkbox',
+                ['framename'] = 'ReduceWotlkCloth',
+                ['label'] = string.format(
+                    'Split %s, %s, and %s into components',
+                    (select(2, GetItemInfoCustom(41593))), -- Ebonweave
+                    (select(2, GetItemInfoCustom(41594))), -- Moonshroud
+                    (select(2, GetItemInfoCustom(41595)))  -- Spellweave
+                ),
+                ['callback'] = function(pageKey, fieldKey, value)
+                    local exclude
+                    if(not value) then
+                        exclude = true
+                    end
+                    
+                    lookup.summaryReductionExclusions[41593] = exclude -- Ebonweave
+                    lookup.summaryReductionExclusions[41594] = exclude -- Moonshroud
+                    lookup.summaryReductionExclusions[41595] = exclude -- Spellweave
+                end,
+            },
+            {
+                ['key'] = 'reduce-tbc-cloth',
+                ['type'] = 'checkbox',
+                ['framename'] = 'ReduceTbcCloth',
+                ['label'] = string.format(
+                    'Split %s, %s, and %s into components',
+                    (select(2, GetItemInfoCustom(24272))), -- Shadowcloth
+                    (select(2, GetItemInfoCustom(21845))), -- Primal Mooncloth
+                    (select(2, GetItemInfoCustom(24271)))  -- Spellcloth
+                ),
+                ['callback'] = function(pageKey, fieldKey, value)
+                    local exclude
+                    if(not value) then
+                        exclude = true
+                    end
+                    
+                    lookup.summaryReductionExclusions[24272] = exclude -- Shadowcloth
+                    lookup.summaryReductionExclusions[21845] = exclude -- Primal Mooncloth
+                    lookup.summaryReductionExclusions[24271] = exclude -- Spellcloth
+                end,
+            },
+            {
+                ['key'] = 'reduce-primal-might',
+                ['type'] = 'checkbox',
+                ['framename'] = 'ReducePrimalMight',
+                ['label'] = string.format(
+                    'Split %s into components',
+                    (select(2, GetItemInfoCustom(23571))) -- Primal Might
+                ),
+                ['callback'] = function(pageKey, fieldKey, value)
+                    local exclude
+                    if(not value) then
+                        exclude = true
+                    end
+                    
+                    lookup.summaryReductionExclusions[23571] = exclude -- Primal Might
+                end,
             },
         }
         
@@ -239,10 +326,19 @@ options = {
                                     ['label'] = 'Include reagents',
                                 },
                                 {
-                                    ['key'] = 'have-materials',
+                                    ['key'] = 'search-include-tooltip',
                                     ['type'] = 'checkbox',
-                                    ['framename'] = 'HaveMaterials',
-                                    ['label'] = 'Have materials',
+                                    ['framename'] = 'IncludeTooltip',
+                                    ['label'] = 'Include tooltip',
+                                },
+                                {
+                                    ['key'] = 'minimum-quantity',
+                                    ['type'] = 'increment-text',
+                                    ['framename'] = 'MinimumQuantity',
+                                    ['label'] = 'Minimum quantity',
+                                    ['increment'] = 1,
+                                    ['width'] = 70,
+                                    ['min'] = 0,
                                 },
                                 {
                                     ['key'] = 'exclude-items-in-bags',

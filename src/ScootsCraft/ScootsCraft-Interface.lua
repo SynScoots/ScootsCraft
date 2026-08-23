@@ -795,17 +795,18 @@ interface = {
         
         -- Search
         frames.searchFilter = CreateFrame('EditBox', 'ScootsCraft-Filters-SearchBox', frames.filterHolder)
-        frames.searchFilter:SetSize(140, 19)
-        frames.searchFilter:SetPoint('TOPLEFT', frames.filterHolder, 'TOPLEFT', 5, -5)
+        frames.searchFilter:SetSize(114, 19)
         frames.searchFilter:SetAutoFocus(false)
         frames.searchFilter:SetFontObject('GameFontHighlightSmall')
         frames.searchFilter:SetJustifyH('LEFT')
         frames.searchFilter:SetTextInsets(5, 5, 0, 0)
 
         frames.searchFilter.label = frames.searchFilter:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall')
-        frames.searchFilter.label:SetPoint('LEFT', 5, 0)
+        frames.searchFilter.label:SetPoint('BOTTOMLEFT', frames.searchFilter, 'TOPLEFT', 0, 0)
         frames.searchFilter.label:SetJustifyH('LEFT')
         frames.searchFilter.label:SetText('Search')
+        
+        frames.searchFilter:SetPoint('TOPLEFT', frames.filterHolder, 'TOPLEFT', 5, 2 - frames.searchFilter.label:GetHeight())
         
         frames.searchFilter:SetScript('OnEnterPressed', EditBox_ClearFocus)
         frames.searchFilter:SetScript('OnEscapePressed', EditBox_ClearFocus)
@@ -814,20 +815,8 @@ interface = {
             EditBox_HighlightText(frames.searchFilter)
         end)
         
-        frames.searchFilter:SetScript('OnEditFocusLost', function()
-            if(frames.searchFilter:GetText() == '') then
-                frames.searchFilter.label:Show()
-            end
-        end)
-        
         frames.searchFilter:SetScript('OnTextChanged', function()
             core.setFilter('search', frames.searchFilter:GetText())
-            
-            if(frames.searchFilter:GetText() == '') then
-                frames.searchFilter.label:Show()
-            else
-                frames.searchFilter.label:Hide()
-            end
         end)
         
         frames.searchFilter.bgLeft = frames.searchFilter:CreateTexture(nil, 'BACKGROUND')
@@ -849,37 +838,86 @@ interface = {
         frames.searchFilter.bgMiddle:SetPoint('RIGHT', frames.searchFilter.bgRight, 'LEFT', 0, 0)
         frames.searchFilter.bgMiddle:SetTexCoord(0.0625, 0.9375, 0, 0.625)
         
+        -- Reset filters
+        frames.resetFilters = CreateFrame('Button', 'ScootsCraft-Filters-Reset', frames.filterHolder)
+        frames.resetFilters:SetSize(23, 23)
+        frames.resetFilters:SetPoint('LEFT', frames.searchFilter, 'RIGHT', 3, 0)
+        
+        frames.resetFilters:SetNormalTexture('Interface\\AddOns\\ScootsCraft\\Textures\\Refresh-Up')
+        frames.resetFilters:SetPushedTexture('Interface\\AddOns\\ScootsCraft\\Textures\\Refresh-Down')
+        frames.resetFilters:SetDisabledTexture('Interface\\AddOns\\ScootsCraft\\Textures\\Refresh-Disabled')
+        frames.resetFilters:SetHighlightTexture('Interface\\Buttons\\UI-Common-MouseHilight', 'ADD')
+        
+        frames.resetFilters:SetScript('OnEnter', function()
+            GameTooltip:SetOwner(frames.resetFilters, 'ANCHOR_TOPLEFT')
+            GameTooltip:SetText('Reset filters to default values.', nil, nil, nil, nil, 1)
+            GameTooltip:Show()
+        end)
+        
+        frames.resetFilters:SetScript('OnLeave', GameTooltip_Hide)
+        
+        frames.resetFilters:SetScript('OnClick', function()
+            EditBox_ClearFocus(frames.searchFilter)
+            
+            for _, key in ipairs(lookup.filterKeys) do
+                core.filters[core.activeSkill][key] = options.get(string.format('%d.%s.%s', core.activeSkill, 'default-filters', key))
+            end
+            
+            interface.updateFilterDisplay()
+            core.refreshRecipeList()
+        end)
+        
+        -- Search include reagents
         frames.searchFilterIncludeReagents = interface.insertFilterCheckbox({
             ['framename'] = 'ScootsCraft-Filters-SearchBox-IncludeReagents',
             ['parent'] = frames.filterHolder,
             ['prior'] = frames.searchFilter,
-            ['offset'] = 2,
+            ['offset'] = -1,
             ['name'] = 'Include reagents',
             ['filterkey'] = 'search-include-reagents',
             ['tooltip'] = 'Search reagent names as well as recipe names.',
         })
         
-        -- Have materials
-        local divider = interface.insertFilterDivider(frames.searchFilterIncludeReagents)
-        
-        frames.haveMaterialsFilter = interface.insertFilterCheckbox({
-            ['framename'] = 'ScootsCraft-Filters-HaveMaterials',
+        -- Search include tooltip
+        frames.searchFilterIncludeTooltip = interface.insertFilterCheckbox({
+            ['framename'] = 'ScootsCraft-Filters-SearchBox-IncludeTooltip',
             ['parent'] = frames.filterHolder,
-            ['prior'] = divider,
+            ['prior'] = frames.searchFilterIncludeReagents,
             ['offset'] = -2,
-            ['name'] = 'Have materials',
-            ['filterkey'] = 'have-materials',
-            ['tooltip'] = 'Only show recipes that you have the required materials to make.',
+            ['name'] = 'Include tooltip',
+            ['filterkey'] = 'search-include-tooltip',
+            ['tooltip'] = 'Search item tooltips as well as recipe names.',
         })
         
+        divider = interface.insertFilterDivider(frames.searchFilterIncludeTooltip)
+        
+        -- Minimum quantity
+        frames.minimumQuantityFilter = options.insertOptionsIncrementTextField({
+            ['framename'] = 'ScootsCraft-Filters-MinimumQuantity',
+            ['parent'] = frames.filterHolder,
+            ['label'] = 'Minimum quantity',
+            ['width'] = 50,
+            ['height'] = 20,
+            ['justify'] = 'CENTER',
+            ['increment'] = 1,
+            ['min'] = 0,
+            ['tooltip'] = 'Only show recipes that you have the required materials to make at least this many of.',
+            ['callback'] = function(self, value)
+                core.setFilter('minimum-quantity', value)
+            end,
+        })
+        
+        frames.minimumQuantityFilter:SetPoint('TOPLEFT', divider, 'BOTTOMLEFT', 18, -4 - frames.minimumQuantityFilter.label:GetHeight())
+        
         -- In bags
-        divider = interface.insertFilterDivider(frames.haveMaterialsFilter)
+        divider = interface.insertFilterDivider()
+        divider:SetPoint('TOPLEFT', frames.minimumQuantityFilter.incrementDown, 'BOTTOMLEFT', 0, -6)
         
         frames.excludeItemsInBagsFilter = interface.insertFilterCheckbox({
             ['framename'] = 'ScootsCraft-Filters-ExcludeItemsInBags',
             ['parent'] = frames.filterHolder,
             ['prior'] = divider,
-            ['offset'] = -2,
+            ['offset'] = -4,
             ['name'] = 'Exclude items in bags',
             ['filterkey'] = 'exclude-items-in-bags',
             ['tooltip'] = 'Exclude recipes which create items that are already in your bags.',
@@ -929,22 +967,10 @@ interface = {
             ['filterkey'] = 'attuned-level',
             ['choices'] = {
                 {
-                    ['framenamesuffix'] = 'NotAttuned',
-                    ['name'] = 'Unattuned',
-                    ['value'] = 0,
-                    ['tooltip'] = 'Only show equipment you have not attuned at all.',
-                },
-                {
-                    ['framenamesuffix'] = 'Baseline',
-                    ['name'] = 'Up to baseline',
-                    ['value'] = 1,
-                    ['tooltip'] = 'Only show equipment you have not attuned at all, or only attuned at a baseline level.',
-                },
-                {
-                    ['framenamesuffix'] = 'Titanforged',
-                    ['name'] = 'Up to titanforged',
-                    ['value'] = 2,
-                    ['tooltip'] = 'Only show equipment you have not attuned at all, or only attuned up to and including at a titanforged level.',
+                    ['framenamesuffix'] = 'Lightforged',
+                    ['name'] = 'Any',
+                    ['value'] = 4,
+                    ['tooltip'] = 'Show all equipment items.',
                 },
                 {
                     ['framenamesuffix'] = 'Warforged',
@@ -953,37 +979,25 @@ interface = {
                     ['tooltip'] = 'Only show equipment you have not attuned at all, or only attuned up to and including at a warforged level.',
                 },
                 {
-                    ['framenamesuffix'] = 'Lightforged',
-                    ['name'] = 'Up to lightforged',
-                    ['value'] = 4,
-                    ['tooltip'] = 'Show all equipment items.',
+                    ['framenamesuffix'] = 'Titanforged',
+                    ['name'] = 'Up to titanforged',
+                    ['value'] = 2,
+                    ['tooltip'] = 'Only show equipment you have not attuned at all, or only attuned up to and including at a titanforged level.',
+                },
+                {
+                    ['framenamesuffix'] = 'Baseline',
+                    ['name'] = 'Up to baseline',
+                    ['value'] = 1,
+                    ['tooltip'] = 'Only show equipment you have not attuned at all, or only attuned at a baseline level.',
+                },
+                {
+                    ['framenamesuffix'] = 'NotAttuned',
+                    ['name'] = 'Unattuned only',
+                    ['value'] = 0,
+                    ['tooltip'] = 'Only show equipment you have not attuned at all.',
                 },
             },
         })
-        
-        -- Reset
-        divider = interface.insertFilterDivider(frames.attunedAtLevelFilter[#frames.attunedAtLevelFilter])
-        
-        frames.resetFilters = CreateFrame('Button', 'ScootsCraft-Filters-Reset', frames.filterHolder, 'UIPanelButtonTemplate')
-        frames.resetFilters:SetSize(100, 20)
-        frames.resetFilters:SetPoint('TOPLEFT', divider, 'BOTTOMLEFT', 0, -4)
-        frames.resetFilters:SetText('Reset filters')
-        
-        frames.resetFilters:SetScript('OnClick', function()
-            EditBox_ClearFocus(frames.searchFilter)
-        
-            core.filters[core.activeSkill] = {
-                ['search'] = '',
-                ['search-include-reagents'] = false,
-                ['have-materials'] = false,
-                ['exclude-items-in-bags'] = false,
-                ['attuneable'] = 'all',
-                ['attuned-level'] = 4,
-            }
-            
-            interface.updateFilterDisplay()
-            core.refreshRecipeList()
-        end)
         
         --
         
@@ -1051,14 +1065,9 @@ interface = {
     ['updateFilterDisplay'] = function()
         frames.searchFilter:SetText(core.getFilter('search'))
         
-        if(core.getFilter('search') == '') then
-            frames.searchFilter.label:Show()
-        else
-            frames.searchFilter.label:Hide()
-        end
-        
         frames.searchFilterIncludeReagents:SetChecked(core.getFilter('search-include-reagents'))
-        frames.haveMaterialsFilter:SetChecked(core.getFilter('have-materials'))
+        frames.searchFilterIncludeTooltip:SetChecked(core.getFilter('search-include-tooltip'))
+        frames.minimumQuantityFilter:SetText(core.getFilter('minimum-quantity'))
         frames.excludeItemsInBagsFilter:SetChecked(core.getFilter('exclude-items-in-bags'))
         
         for _, checkbox in pairs(frames.attuneableFilter) do
@@ -1087,39 +1096,58 @@ interface = {
     ['insertFilterDivider'] = function(priorElement)
         local divider = frames.filterHolder:CreateTexture(nil, 'OVERLAY')
         divider:SetSize(frames.filterHolder:GetWidth() - 10, 1)
-        divider:SetPoint('TOPLEFT', priorElement, 'BOTTOMLEFT', 0, -2)
         divider:SetTexture(1, 1, 1, 0.1)
+        
+        if(priorElement) then
+            divider:SetPoint('TOPLEFT', priorElement, 'BOTTOMLEFT', 0, -4)
+        end
         
         return divider
     end,
     ['insertFilterCheckbox'] = function(data)
         local checkbox = CreateFrame('CheckButton', data.framename, data.parent, 'UICheckButtonTemplate')
-        checkbox:SetSize(22, 22)
-        checkbox:SetPoint('TOPLEFT', data.prior, 'BOTTOMLEFT', 0, data.offset)
+        checkbox:SetSize(17, 17)
+        checkbox:SetPoint('TOPLEFT', data.prior, 'BOTTOMLEFT', 0, data.offset or 0)
         
-        _G[checkbox:GetName() .. 'Text']:SetText(data.name)
-        _G[checkbox:GetName() .. 'Text']:ClearAllPoints()
-        _G[checkbox:GetName() .. 'Text']:SetPoint('TOPLEFT', checkbox, 'TOPRIGHT', -2, -5)
+        checkbox.label = _G[checkbox:GetName() .. 'Text']
         
-        checkbox:SetHitRectInsets(0, 0 - _G[checkbox:GetName() .. 'Text']:GetWidth(), 0, 0)
+        checkbox.label:SetFontObject('GameFontNormalSmall')
+        checkbox.label:SetText(data.name)
+        checkbox.label:ClearAllPoints()
+        checkbox.label:SetPoint('LEFT', checkbox, 'RIGHT', 3, 1)
+        
+        checkbox:SetHitRectInsets(0, 0 - (checkbox.label:GetWidth() + 3), 0, 0)
+        
+        for _, texture in pairs({
+            checkbox:GetNormalTexture(),
+            checkbox:GetPushedTexture(),
+            checkbox:GetCheckedTexture(),
+            checkbox:GetHighlightTexture(),
+            checkbox:GetDisabledTexture(),
+            checkbox:GetDisabledCheckedTexture(),
+        }) do
+            texture:SetTexCoord(0.14, 0.84, 0.17, 0.8)
+        end
         
         checkbox:SetScript('OnClick', function(self)
             core.setFilter(data.filterkey, self:GetChecked() == 1)
         end)
         
-        checkbox:SetScript('OnEnter', function()
-            GameTooltip:SetOwner(checkbox, 'ANCHOR_TOPLEFT')
-            GameTooltip:SetText(data.tooltip, nil, nil, nil, nil, 1)
-            GameTooltip:Show()
-        end)
-        
-        checkbox:SetScript('OnLeave', GameTooltip_Hide)
+        if(data.tooltip) then
+            checkbox:SetScript('OnEnter', function()
+                GameTooltip:SetOwner(checkbox, 'ANCHOR_TOPLEFT')
+                GameTooltip:SetText(data.tooltip, nil, nil, nil, nil, 1)
+                GameTooltip:Show()
+            end)
+            
+            checkbox:SetScript('OnLeave', GameTooltip_Hide)
+        end
         
         return checkbox
     end,
     ['insertFilterRadio'] = function(data)
         local header = data.parent:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall')
-        header:SetPoint('TOPLEFT', data.prior, 'BOTTOMLEFT', 0, data.offset)
+        header:SetPoint('TOPLEFT', data.prior, 'BOTTOMLEFT', 0, data.offset or 0)
         header:SetJustifyH('LEFT')
         header:SetText(data.name)
         
@@ -1127,16 +1155,11 @@ interface = {
         local checkboxes = {}
         local index = 1
         for _, choice in ipairs(data.choices) do
-            local offset = 5
-            if(index == 1) then
-                offset = 0
-            end
-        
             local checkbox = interface.insertFilterCheckbox({
                 ['framename'] = data.framenameprefix .. choice.framenamesuffix,
                 ['parent'] = data.parent,
                 ['prior'] = prior,
-                ['offset'] = offset,
+                ['offset'] = -1,
                 ['name'] = choice.name,
                 ['filterkey'] = data.filterkey,
                 ['tooltip'] = choice.tooltip,

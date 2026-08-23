@@ -139,6 +139,17 @@ lookup = {
         ['INVTYPE_THROWN'] = 25,
         ['INVTYPE_RANGEDRIGHT'] = 26,
     },
+    ['filterKeys'] = {
+        'search',
+        'search-include-reagents',
+        'search-include-tooltip',
+        'minimum-quantity',
+        'exclude-items-in-bags',
+        'attuneable',
+        'attuned-level',
+        'section',
+        'inv-slot',
+    },
     ['getSectionRewrites'] = function()
         if(lookup.sectionRewrites == nil) then
             lookup.sectionRewrites = {

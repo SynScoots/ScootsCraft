@@ -16,6 +16,8 @@ core = {
         return true
     end,
     ['init'] = function()
+        core.timer = 0
+        core.prevLoop = 0
         core.skills = {}
         core.skillMap = {}
         core.skillIndexMap = {}
@@ -29,6 +31,14 @@ core = {
         core.forgeHelperItem = false
         core.forgeHelperQuantity = nil
         core.merchantOpen = false
+        
+        core.destroyingSlots = {
+            [0] = {},
+            [1] = {},
+            [2] = {},
+            [3] = {},
+            [4] = {},
+        }
 
         utility.cacheProfessions()
         
@@ -40,6 +50,14 @@ core = {
             if(_G['SCOOTSCRAFT_SAVEDDATA'].lastActiveSkill ~= nil) then
                 storage.lastActiveSkill = _G['SCOOTSCRAFT_SAVEDDATA'].lastActiveSkill
             end
+            
+            if(_G['SCOOTSCRAFT_SAVEDDATA'].tooltipCache ~= nil) then
+                storage.tooltipCache = _G['SCOOTSCRAFT_SAVEDDATA'].tooltipCache
+            end
+        end
+        
+        if(storage.tooltipCache == nil) then
+            storage.tooltipCache = {}
         end
         
         if(storage.lastActiveSkill ~= nil) then
@@ -49,6 +67,22 @@ core = {
         options.load()
         options.build()
         interface.buildMinimapButton()
+        
+        if(not options.get('reduce-wotlk-cloth')) then
+            lookup.summaryReductionExclusions[41593] = true -- Ebonweave
+            lookup.summaryReductionExclusions[41594] = true -- Moonshroud
+            lookup.summaryReductionExclusions[41595] = true -- Spellweave
+        end
+        
+        if(not options.get('reduce-tbc-cloth')) then
+            lookup.summaryReductionExclusions[24272] = true -- Shadowcloth
+            lookup.summaryReductionExclusions[21845] = true -- Primal Mooncloth
+            lookup.summaryReductionExclusions[24271] = true -- Spellcloth
+        end
+        
+        if(not options.get('reduce-primal-might')) then
+            lookup.summaryReductionExclusions[23571] = true -- Primal Might
+        end
     end,
     ['eventHandler'] = function(self, event, arg1)
         if(event == 'BAG_UPDATE'
@@ -64,8 +98,20 @@ core = {
             _G['SCOOTSCRAFT_SAVEDDATA'] = storage
         end
     end,
-    ['updateLoop'] = function()
+    ['updateLoop'] = function(self, elapsed)
+        core.timer = core.timer + elapsed
+        
+        if((core.prevLoop + 0.025) > core.timer) then
+            return
+        end
+        
+        core.prevLoop = core.timer
+        
         if(frames.master ~= nil and frames.master:IsVisible()) then
+            if(core.doForgeHelperLoop) then
+                core.handleForgeHelper()
+            end
+            
             if(core.triggeredEvents['BAG_UPDATE'] ~= nil) then
                 local skillIndex = core.skillIndexMap[core.activeSkill]
             
@@ -77,7 +123,7 @@ core = {
                 core.renderRecipe(core.visibleSpellId)
                 
                 if(core.forgeHelper ~= nil and core.forgeHelperItem ~= nil) then
-                    core.handleForgeHelper()
+                    core.doForgeHelperLoop = true
                 end
             end
             
@@ -176,7 +222,7 @@ core = {
             core.getFilter('attuneable') == 'character' and 1 or 0,
             (core.getFilter('attuneable') == 'account' or core.getFilter('attuneable') == 'character') and 4 or 0,
             core.getFilter('search-include-reagents') and 8 or 0,
-            core.getFilter('have-materials') and 0x20 or 0
+            core.getFilter('minimum-quantity') > 0 and 0x20 or 0
         )
         
         local excludeFilter = bit.bor(
@@ -184,21 +230,40 @@ core = {
             core.getFilter('attuned-level') ~= 4 and 0x40 or 0
         )
         
-        return Custom_GetProfessionRecipes(
+        local spellIdList = Custom_GetProfessionRecipes(
             skillId,
             includeFilter,
             excludeFilter,
             -3, -- Sort flag
-            core.getFilter('search'),        
+            core.getFilter('search-include-tooltip') and '' or core.getFilter('search'),        
             core.getFilter('attuned-level'), 
             -1, -- Item class
             -1, -- Item sub-class
             core.getFilter('inv-slot')
         )
+        
+        if(core.getFilter('minimum-quantity') > 1) then
+            for spellIndex = #spellIdList, 1, -1 do
+                if(select(5, Custom_GetProfessionRecipeInfo(spellIdList[spellIndex])) < core.getFilter('minimum-quantity')) then
+                    table.remove(spellIdList, spellIndex)
+                end
+            end
+        end
+        
+        if(core.getFilter('search') ~= '' and core.getFilter('search-include-tooltip')) then
+            for spellIndex = #spellIdList, 1, -1 do
+                if(not utility.craftingTooltipContains(spellIdList[spellIndex], core.getFilter('search'))) then
+                    table.remove(spellIdList, spellIndex)
+                end
+            end
+        end
+        
+        return spellIdList
     end,
     ['refreshRecipeList'] = function()
         core.recipes = {}
         local recipes = core.fetchRecipes(core.activeSkill)
+        local selectedFound = false
         
         local headersFlat = {}
         
@@ -207,6 +272,10 @@ core = {
         
         for spellIndex, spellId in ipairs(recipes) do
             local headerName = select(7, Custom_GetProfessionRecipeInfo(spellId))
+            
+            if(core.selectedCraft[core.activeSkill] == spellId) then
+                selectedFound = true
+            end
             
             if(spellHeaderRewrites[core.activeSkill][spellId] ~= nil) then
                 headerName = spellHeaderRewrites[core.activeSkill][spellId]
@@ -285,6 +354,21 @@ core = {
                 else
                     table.remove(core.recipes, craftIndex)
                 end
+            end
+        end
+        
+        if(#core.recipes and core.selectedIndex and options.get('select-next-on-hide') and not selectedFound) then
+            if(#core.recipes < core.selectedIndex) then
+                core.selectedIndex = #core.recipes
+            end
+            
+            while(core.selectedIndex > 0) do
+                if(type(core.recipes[core.selectedIndex]) == 'table') then
+                    core.selectRecipe(core.recipes[core.selectedIndex].spellId)
+                    break
+                end
+                
+                core.selectedIndex = core.selectedIndex - 1
             end
         end
         
@@ -471,6 +555,13 @@ core = {
         end
     end,
     ['selectRecipe'] = function(spellId)
+        for recipeIndex, recipe in ipairs(core.recipes) do
+            if(recipe.spellId == spellId) then
+                core.selectedIndex = recipeIndex
+                break
+            end
+        end
+        
         core.selectedCraft[core.activeSkill] = spellId
         core.renderRecipe(spellId)
         core.renderRecipeList()
@@ -516,8 +607,10 @@ core = {
         local iconTexture
         if((createdItemId or 0) ~= 0) then
             iconTexture = GetItemIcon(createdItemId)
+            frames.craftIcon.text:Show()
         else
             iconTexture = select(3, GetSpellInfo(spellId))
+            frames.craftIcon.text:Hide()
         end
         
         frames.craftIcon:SetNormalTexture(iconTexture)
@@ -817,29 +910,44 @@ core = {
             if(altVerb == nil and utility.getItemCanForge(createdItemId)) then
                 core.forgeHelperItem = createdItemId
                 core.forgeHelperQuantity = quantity
+                core.forgeHelperSuccess = nil
             end
         end
         
         Custom_DoProfessionRecipe(core.visibleSpellId, quantity)
     end,
     ['handleForgeHelper'] = function()
+        local success
+        local destroyCount = 0
+
         for bagIndex = 0, 4 do
-            local bagSlots = GetContainerNumSlots(bagIndex)
-            
-            for slotIndex = 1, bagSlots do
-                local _, bagItemCount, _, _, _, _, bagItemLink = GetContainerItemInfo(bagIndex, slotIndex)
+            for slotIndex = 1, GetContainerNumSlots(bagIndex) do
+                if(destroyCount >= 10) then
+                    break
+                end
                 
-                if(bagItemLink ~= nil) then
+                local bagItemLink = select(7, GetContainerItemInfo(bagIndex, slotIndex))
+                
+                if(bagItemLink == nil) then
+                    if(core.destroyingSlots[bagIndex][slotIndex]) then
+                        core.destroyingSlots[bagIndex][slotIndex] = nil
+                    end
+                elseif(core.destroyingSlots[bagIndex][slotIndex]) then
+                    destroyCount = destroyCount + 1
+                else
                     local bagItemId = CustomExtractItemId(bagItemLink)
                     
                     if(bagItemId == core.forgeHelperItem) then
                         if(GetItemLinkTitanforge(bagItemLink) >= core.forgeHelper) then
-                            core.forgeHelperItem = nil
-                            -- TODO: insert a delay to vendor unforged here
+                            success = true
                         else
+                            core.destroyingSlots[bagIndex][slotIndex] = true
+                            destroyCount = destroyCount + 1
+                            
                             if(core.merchantOpen) then
                                 UseContainerItem(bagIndex, slotIndex)
                             else
+                                ClearCursor()
                                 PickupContainerItem(bagIndex, slotIndex)
                                 DeleteCursorItem()
                             end
@@ -849,12 +957,27 @@ core = {
             end
         end
         
+        if(destroyCount < 10) then
+            core.doForgeHelperLoop = nil
+        end
+    
+        if(success and not core.forgeHelperSuccess) then
+            core.forgeHelperSuccess = true
+            
+            if(#ScootsCraft.forgeHelperCallbacks) then
+                for _, callback in ipairs(ScootsCraft.forgeHelperCallbacks) do
+                    callback(core.forgeHelperItem)
+                end
+            end
+        end
+        
         if(core.forgeHelperItem ~= nil) then
-            frames.quantity:SetNumber(core.forgeHelperQuantity)
+            frames.quantity:SetNumber(core.forgeHelperQuantity or 1)
         end
     end,
     ['handleReagentJump'] = function(itemId)
         local spellId = Custom_GetProfessionRecipeFromCraftedItem(itemId)
+        core.selectedIndex = nil
         
         if(spellId ~= nil) then
             local skillId = Custom_GetProfessionRecipeInfo(spellId)

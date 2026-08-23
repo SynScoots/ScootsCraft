@@ -131,7 +131,10 @@ options = {
         frames.options.menuLinks['general']:SetPoint('TOPLEFT', frames.options.menuScrollChild, 'TOPLEFT', 0, -8)
         local height = frames.options.menuLinks['general']:GetHeight() + 8
         
-        local prevLink = frames.options.menuLinks['general']
+        frames.options.menuLinks['summary']:SetPoint('TOPLEFT', frames.options.menuLinks['general'], 'BOTTOMLEFT', 0, 0)
+        height = height + frames.options.menuLinks['summary']:GetHeight()
+        
+        local prevLink = frames.options.menuLinks['summary']
         
         for _, skill in ipairs(lookup.professionMap) do
             local menuLink = frames.options.menuLinks[skill.skillId]
@@ -1198,7 +1201,7 @@ options = {
         })
 
         if(data.label) then
-            textbox.label:SetPoint('BOTTOMLEFT', textbox, 'TOPLEFT', 0 - ((data.height or 19) + 1), 0)
+            textbox.label:SetPoint('BOTTOMLEFT', textbox, 'TOPLEFT', 0 - ((data.height or 19) - 2), 0)
         end
         
         textbox.currentValue = data.default or data.min or 0
@@ -1210,13 +1213,22 @@ options = {
         --
         
         local incrementDown = CreateFrame('Button', data.framename .. '-IncrementDown', data.parent)
-        incrementDown:SetSize(data.height, data.height)
-        incrementDown:SetPoint('RIGHT', textbox, 'LEFT', 1, 0)
+        incrementDown:SetSize(data.height - 4, data.height - 4)
+        incrementDown:SetPoint('RIGHT', textbox, 'LEFT', -2, 0)
         
         incrementDown:SetNormalTexture('Interface\\Buttons\\UI-SpellbookIcon-PrevPage-Up')
         incrementDown:SetPushedTexture('Interface\\Buttons\\UI-SpellbookIcon-PrevPage-Down')
         incrementDown:SetDisabledTexture('Interface\\Buttons\\UI-SpellbookIcon-PrevPage-Disabled')
         incrementDown:SetHighlightTexture('Interface\\Buttons\\UI-Common-MouseHilight', 'ADD')
+        
+        for _, texture in pairs({
+            incrementDown:GetNormalTexture(),
+            incrementDown:GetPushedTexture(),
+            incrementDown:GetHighlightTexture(),
+            incrementDown:GetDisabledTexture(),
+        }) do
+            texture:SetTexCoord(0.1, 0.9, 0.1, 0.9)
+        end
         
         incrementDown:SetScript('OnClick', function()
             textbox.currentValue = string.format(stringFormat, tonumber(textbox.currentValue) - data.increment)
@@ -1233,13 +1245,22 @@ options = {
         --
         
         local incrementUp = CreateFrame('Button', data.framename .. '-IncrementUp', data.parent)
-        incrementUp:SetSize(data.height, data.height)
-        incrementUp:SetPoint('LEFT', textbox, 'RIGHT', -1, 0)
+        incrementUp:SetSize(data.height - 4, data.height - 4)
+        incrementUp:SetPoint('LEFT', textbox, 'RIGHT', 2, 0)
         
         incrementUp:SetNormalTexture('Interface\\Buttons\\UI-SpellbookIcon-NextPage-Up')
         incrementUp:SetPushedTexture('Interface\\Buttons\\UI-SpellbookIcon-NextPage-Down')
         incrementUp:SetDisabledTexture('Interface\\Buttons\\UI-SpellbookIcon-NextPage-Disabled')
         incrementUp:SetHighlightTexture('Interface\\Buttons\\UI-Common-MouseHilight', 'ADD')
+        
+        for _, texture in pairs({
+            incrementUp:GetNormalTexture(),
+            incrementUp:GetPushedTexture(),
+            incrementUp:GetHighlightTexture(),
+            incrementUp:GetDisabledTexture(),
+        }) do
+            texture:SetTexCoord(0.1, 0.9, 0.1, 0.9)
+        end
         
         incrementUp:SetScript('OnClick', function()
             textbox.currentValue = string.format(stringFormat, tonumber(textbox.currentValue) + data.increment)
