@@ -5,8 +5,11 @@
 ## Version: 2.0.0
 ## SavedVariables: SCOOTSCRAFT_SAVEDDATA
 
+Bindings.xml
+ScootsCraft.lua
 ScootsCraft-Core.lua
 ScootsCraft-Interface.lua
 ScootsCraft-Options.lua
-ScootsCraft-Data.lua
-Bindings.xml
+ScootsCraft-Options-Interface.lua
+ScootsCraft-Utility.lua
+ScootsCraft-Lookup.lua
