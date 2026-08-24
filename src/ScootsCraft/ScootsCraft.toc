@@ -2,7 +2,7 @@
 ## Title: Scoots Craft
 ## Author: Scoots
 ## Notes: A complete crafting overhaul with attunement support built-in
-## Version: 2.1.0
+## Version: 2.1.1
 ## SavedVariables: SCOOTSCRAFT_SAVEDDATA
 
 Bindings.xml

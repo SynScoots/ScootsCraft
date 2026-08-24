@@ -83,6 +83,8 @@ core = {
         if(not options.get('reduce-primal-might')) then
             lookup.summaryReductionExclusions[23571] = true -- Primal Might
         end
+        
+        frames.events:SetScript('OnUpdate', core.updateLoop)
     end,
     ['eventHandler'] = function(self, event, arg1)
         if(event == 'BAG_UPDATE'
@@ -1013,7 +1015,6 @@ end
 
 core = ScootsCraft.core
 
-frames.events:SetScript('OnUpdate', core.updateLoop)
 frames.events:SetScript('OnEvent', core.eventHandler)
 
 frames.events:RegisterEvent('ADDON_LOADED')
