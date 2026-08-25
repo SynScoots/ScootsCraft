@@ -130,13 +130,13 @@ options = {
         
         options.optionPageDefinitions = {
             ['general'] = {
-                ['framename'] = 'ScootsCraft-Options-General',
+                ['framename'] = 'General',
                 ['title'] = 'General options',
                 ['description'] = nil,
                 ['callback'] = options.defineGeneralOptions,
             },
             ['summary'] = {
-                ['framename'] = 'ScootsCraft-Options-Summary',
+                ['framename'] = 'Summary',
                 ['title'] = 'Summary options',
                 ['description'] = nil,
                 ['callback'] = options.defineSummaryOptions,
@@ -145,7 +145,7 @@ options = {
         
         for _, skill in ipairs(lookup.professionMap) do
             options.optionPageDefinitions[skill.skillId] = {
-                ['framename'] = 'ScootsCraft-Options-' .. skill.name,
+                ['framename'] = skill.name,
                 ['title'] = skill.name,
                 ['description'] = string.format('Options only for the %s skill.', skill.name),
                 ['callback'] = function(data)
@@ -155,9 +155,49 @@ options = {
         end
         
         frames.options = {}
-        InterfaceOptionsFrame:SetWidth(math.max(900, InterfaceOptionsFrame:GetWidth()))
+        options.fieldKeys = {}
+        frames.options.main = ScootsLibOptions.core.createOptionsInterface(
+            frames.options,
+            options.fieldKeys,
+            {
+                ['framename'] = 'ScootsCraft-Options',
+                ['title'] = ScootsCraft.title,
+                ['version'] = ScootsCraft.version,
+                ['optionGetCallback'] = options.get,
+                ['optionChangeCallback'] = function(pageKey, fieldKey, value)
+                    options.set(fieldKey, value)
+                end,
+            },
+            options.optionPageDefinitions,
+            function()
+                frames.options.menuLinks.general.select()
+                frames.options.contentHolder.setActiveChild(frames.options.optionPages.general)
+                options.sortMenuLinks()
+                
+                for key, menuLink in pairs(frames.options.menuLinks) do
+                    menuLink.fade(options.get(key .. '-enabled') == false)
+                end
+            end
+        )
+    end,
+    ['sortMenuLinks'] = function()
+        frames.options.menuLinks['general']:SetPoint('TOPLEFT', frames.options.menuScrollChild, 'TOPLEFT', 0, -8)
+        local height = frames.options.menuLinks['general']:GetHeight() + 8
         
-        options.createOptionsInterface()
+        frames.options.menuLinks['summary']:SetPoint('TOPLEFT', frames.options.menuLinks['general'], 'BOTTOMLEFT', 0, 0)
+        height = height + frames.options.menuLinks['summary']:GetHeight()
+        
+        local prevLink = frames.options.menuLinks['summary']
+        
+        for _, skill in ipairs(lookup.professionMap) do
+            local menuLink = frames.options.menuLinks[skill.skillId]
+            menuLink:SetPoint('TOPLEFT', prevLink, 'BOTTOMLEFT', 0, 0)
+            
+            prevLink = menuLink
+            height = height + menuLink:GetHeight()
+        end
+        
+        frames.options.menuScrollChild:SetHeight(height + 8)
     end,
     ['defineGeneralOptions'] = function(data)
         local fieldList = {
@@ -306,7 +346,16 @@ options = {
                 ['framename'] = 'DefaultFilters',
                 ['label'] = 'Default filters',
                 ['callback'] = function(group, header)
-                    local firstField, subHeight, xOffset, yOffset = options.processOptionsFieldList({
+                    local firstField, subHeight, xOffset, yOffset = ScootsLibOptions.core.processOptionsFieldList(frames.options, options.fieldKeys, {
+                        ['parentAddon'] = {
+                            ['framename'] = 'ScootsCraft-Options-' .. lookup.professionMap[core.skillIndexMap[skillId]].name,
+                            ['title'] = ScootsCraft.title,
+                            ['version'] = ScootsCraft.version,
+                            ['optionGetCallback'] = options.get,
+                            ['optionChangeCallback'] = function(pageKey, fieldKey, value)
+                                options.set(fieldKey, value)
+                            end,
+                        },
                         ['key'] = data.key,
                         ['framename'] = data.framename,
                         ['parent'] = group,
@@ -398,7 +447,6 @@ options = {
         
                             for _, field in ipairs(groupFieldList) do
                                 field.key = string.format('%d.%s.%s', skillId, 'default-filters', field.key)
-                                field.framename = string.format('%s-%s', data.framename, field.framename)
                             end
                             
                             return groupFieldList

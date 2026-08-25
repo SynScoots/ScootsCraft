@@ -892,7 +892,7 @@ interface = {
         divider = interface.insertFilterDivider(frames.searchFilterIncludeTooltip)
         
         -- Minimum quantity
-        frames.minimumQuantityFilter = options.insertOptionsIncrementTextField({
+        frames.minimumQuantityFilter = ScootsLibOptions.core.insertOptionsIncrementTextField({
             ['framename'] = 'ScootsCraft-Filters-MinimumQuantity',
             ['parent'] = frames.filterHolder,
             ['label'] = 'Minimum quantity',

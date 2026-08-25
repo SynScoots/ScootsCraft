@@ -2,14 +2,14 @@
 ## Title: Scoots Craft
 ## Author: Scoots
 ## Notes: A complete crafting overhaul with attunement support built-in
-## Version: 2.1.1
+## Version: 2.2.0
 ## SavedVariables: SCOOTSCRAFT_SAVEDDATA
+## Dependencies: ScootsLibOptions
 
 Bindings.xml
 ScootsCraft.lua
 ScootsCraft-Core.lua
 ScootsCraft-Interface.lua
 ScootsCraft-Options.lua
-ScootsCraft-Options-Interface.lua
 ScootsCraft-Utility.lua
 ScootsCraft-Lookup.lua

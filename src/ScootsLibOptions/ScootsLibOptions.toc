@@ -1,0 +1,6 @@
+## Interface: 30300
+## Title: Scoots Options Library
+## Author: Scoots
+## Notes: A library for creating options
+
+ScootsLibOptions.lua
