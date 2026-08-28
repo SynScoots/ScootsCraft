@@ -631,7 +631,7 @@ ScootsLibOptions.core = {
                 value = tonumber(value)
                 
                 if(value ~= (fieldData.key)) then
-                    pageData.optionChange(pageData.key, fieldData.key, value)
+                    pageData.parentAddon.optionChangeCallback(pageData.key, fieldData.key, value)
             
                     if(fieldData.callback) then
                         fieldData.callback(pageData.key, fieldData.key, value)
