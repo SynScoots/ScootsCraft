@@ -18,6 +18,10 @@ To open, either:
 * Left-click the minimap icon.
 * Configure a key-bind for "ScootsCraft / Toggle window" in the game Key Bindings menu.
 
+## Dependencies ##
+
+- <a href="https://github.com/SynScoots/ScootsLibOptions">ScootsLibOptions</a>
+
 ## Installation ##
 
 Download this repository, then extract the contents from the `src` directory into your `World of Warcraft/Interface/AddOns` directory.
