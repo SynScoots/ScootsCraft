@@ -643,7 +643,7 @@ core = {
         
         --
         
-        local requires = core.parseRequirements(spellId)
+        local requires = BuildColoredListString(Custom_GetTradeSkillTools(spellId))
         if(requires) then
             frames.craftItem.requiresLabel:SetText('Requires:')
             frames.craftItem.requires:SetText(requires)
@@ -751,29 +751,6 @@ core = {
                 
                 frames.front.forgeHelperTitle:Hide()
             end
-        end
-    end,
-    ['parseRequirements'] = function(spellId)
-        local _, focusName, _, areaName, _, totemOneName, _, totemTwoName, _, totemOneCatName, _, totemTwoCatName = Custom_GetSpellTools(spellId)
-        local output = {}
-        
-        for _, requirement in pairs({
-            focusName,
-            areaName,
-            totemOneName,
-            totemTwoName,
-            totemOneCatName,
-            totemTwoCatName,
-        }) do
-            if(requirement ~= nil) then
-                table.insert(output, requirement)
-            end
-        end
-        
-        if(#output == 0) then
-            return nil
-        else
-            return table.concat(output, ', ')
         end
     end,
     ['generateSummary'] = function(skillId)

@@ -68,7 +68,6 @@ utility = {
         local requiredReagents = Custom_GetProfessionRecipeReagents(spellId)
         
         Custom_CacheHaveItems()
-        local bagItems = Custom_GetHaveItems()
         local reagentsInBags = {}
         
         for itemId, requiredCount in pairs(requiredReagents) do
@@ -77,28 +76,8 @@ utility = {
                 ['required'] = requiredCount,
                 ['owned'] = GetCustomGameData(13, itemId)
             }
-        
-            for _, cachedBagItemId in pairs(bagItems) do
-                if(itemId == cachedBagItemId) then
-                    for bagIndex = 0, 4 do
-                        local bagSlots = GetContainerNumSlots(bagIndex)
-                        
-                        for slotIndex = 1, bagSlots do
-                            local _, bagItemCount, _, _, _, _, bagItemLink = GetContainerItemInfo(bagIndex, slotIndex)
-                            
-                            if(bagItemLink ~= nil) then
-                                local bagItemId = CustomExtractItemId(bagItemLink)
-                                
-                                if(bagItemId == itemId) then
-                                    reagentDetail.owned = reagentDetail.owned + bagItemCount
-                                end
-                            end
-                        end
-                    end
-                    
-                    break
-                end
-            end
+            
+            reagentDetail.owned = reagentDetail.owned + (Custom_IsHaveItem(itemId) or 0)
             
             table.insert(reagents, reagentDetail)
         end
