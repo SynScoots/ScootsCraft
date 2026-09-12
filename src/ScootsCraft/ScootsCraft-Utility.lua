@@ -85,36 +85,11 @@ utility = {
         return reagents
     end,
     ['getBagContents'] = function()
-        lookup.bagContents = lookup.bagContents or {}
-        
-        if(lookup.bagCached) then
-            return lookup.bagContents
+        if(not lookup.bagCached) then
+            Custom_CacheHaveItems()
         end
         
-        for key, _ in pairs(lookup.bagContents) do
-            lookup.bagContents[key] = nil
-        end
-        
-        for slotId = 0, 38 do
-            utility.cacheBagSlot(0xff, slotId)
-        end
-        
-        for bagId = 19, 22 do
-            for slotId = 0, (GetContainerNumSlots(bagId - 19) - 1) do
-                utility.cacheBagSlot(bagId, slotId)
-            end
-        end
-        
-        lookup.bagCached = true
-        return lookup.bagContents
-    end,
-    ['cacheBagSlot'] = function(bagId, slotId)
-        local itemLink = Custom_GetItemLinkBySlot(bagId, slotId)
-        local itemId = CustomExtractItemId(itemLink)
-        
-        if((itemId or 0) ~= 0) then
-            lookup.bagContents[itemId] = (lookup.bagContents[itemId] or 0) + Custom_GetItemCount(bagId, slotId)
-        end
+        return Custom_GetHaveItems(1)
     end,
     ['getItemCanForge'] = function(itemId)
         if((itemId or 0) == 0) then

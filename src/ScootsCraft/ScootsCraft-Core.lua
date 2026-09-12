@@ -40,6 +40,10 @@ core = {
             [4] = {},
         }
         
+        hooksecurefunc('Custom_CacheHaveItems', function()
+            lookup.bagCached = true
+        end)
+        
         core.attachEvents()
         utility.cacheProfessions()
         
