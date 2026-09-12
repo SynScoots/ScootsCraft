@@ -85,27 +85,36 @@ utility = {
         return reagents
     end,
     ['getBagContents'] = function()
-        local bagContents = {}
-
-        for bagIndex = 0, 4 do
-            local bagSlots = GetContainerNumSlots(bagIndex)
-            
-            for slotIndex = 1, bagSlots do
-                local _, itemCount, _, _, _, _, itemLink = GetContainerItemInfo(bagIndex, slotIndex)
-                
-                if(itemLink ~= nil) then
-                    local itemId = CustomExtractItemId(itemLink)
-                    
-                    if(bagContents[itemId] == nil) then
-                        bagContents[itemId] = itemCount
-                    else
-                        bagContents[itemId] = bagContents[itemId] + itemCount
-                    end
-                end
+        lookup.bagContents = lookup.bagContents or {}
+        
+        if(lookup.bagCached) then
+            return lookup.bagContents
+        end
+        
+        for key, _ in pairs(lookup.bagContents) do
+            lookup.bagContents[key] = nil
+        end
+        
+        for slotId = 0, 38 do
+            utility.cacheBagSlot(0xff, slotId)
+        end
+        
+        for bagId = 19, 22 do
+            for slotId = 0, (GetContainerNumSlots(bagId - 19) - 1) do
+                utility.cacheBagSlot(bagId, slotId)
             end
         end
         
-        return bagContents
+        lookup.bagCached = true
+        return lookup.bagContents
+    end,
+    ['cacheBagSlot'] = function(bagId, slotId)
+        local itemLink = Custom_GetItemLinkBySlot(bagId, slotId)
+        local itemId = CustomExtractItemId(itemLink)
+        
+        if((itemId or 0) ~= 0) then
+            lookup.bagContents[itemId] = (lookup.bagContents[itemId] or 0) + Custom_GetItemCount(bagId, slotId)
+        end
     end,
     ['getItemCanForge'] = function(itemId)
         if((itemId or 0) == 0) then

@@ -31,8 +31,6 @@ interface = {
         interface.buildFooterRight()
         
         core.setActiveSkill(skillIndex)
-        
-        frames.events:RegisterEvent('BAG_UPDATE')
     end,
     ['buildMainWindow'] = function()
         frames.master = CreateFrame('Frame', 'ScootsCraft-MasterFrame', UIParent)

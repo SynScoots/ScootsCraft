@@ -39,7 +39,8 @@ core = {
             [3] = {},
             [4] = {},
         }
-
+        
+        core.attachEvents()
         utility.cacheProfessions()
         
         if(_G['SCOOTSCRAFT_SAVEDDATA'] ~= nil) then
@@ -86,9 +87,23 @@ core = {
         
         frames.events:SetScript('OnUpdate', core.updateLoop)
     end,
+    ['attachEvents'] = function()
+        frames.events:RegisterEvent('PLAYER_LOGOUT')
+        frames.events:RegisterEvent('SKILL_LINES_CHANGED')
+        frames.events:RegisterEvent('MERCHANT_SHOW')
+        frames.events:RegisterEvent('MERCHANT_CLOSED')
+        frames.events:RegisterEvent('BAG_UPDATE')
+        
+        RegisterForCustomEvent('SYNASTRIA_RESOURCE_BAG_CHANGED', function()
+            core.eventHandler(frames.events, 'SYNASTRIA_RESOURCE_BAG_CHANGED')
+        end)
+    end,
     ['eventHandler'] = function(self, event, arg1)
-        if(event == 'BAG_UPDATE'
-        or event == 'SKILL_LINES_CHANGED') then
+        if(event == 'BAG_UPDATE' or event == 'SKILL_LINES_CHANGED' or event == 'SYNASTRIA_RESOURCE_BAG_CHANGED') then
+            if(event == 'BAG_UPDATE') then
+                lookup.bagCached = nil
+            end
+            
             core.triggeredEvents[event] = true
         elseif(event == 'MERCHANT_SHOW') then
             core.merchantOpen = true
@@ -114,10 +129,12 @@ core = {
                 core.handleForgeHelper()
             end
             
-            if(core.triggeredEvents['BAG_UPDATE'] ~= nil) then
-                local skillIndex = core.skillIndexMap[core.activeSkill]
-            
+            if(core.triggeredEvents['BAG_UPDATE'] or core.triggeredEvents['SYNASTRIA_RESOURCE_BAG_CHANGED']) then
                 core.triggeredEvents['BAG_UPDATE'] = nil
+                core.triggeredEvents['SYNASTRIA_RESOURCE_BAG_CHANGED'] = nil
+                
+                local skillIndex = core.skillIndexMap[core.activeSkill]
+                
                 frames.quantity:SetNumber(1)
                 utility.cacheSkillLevels()
                 frames.title.skillName:SetText(string.format(' - %s [%d/%d]', core.skills[skillIndex].displayName, core.skills[skillIndex].currentLevel, core.skills[skillIndex].maxLevel))
@@ -756,13 +773,7 @@ core = {
     ['generateSummary'] = function(skillId)
         core.selectRecipe(nil)
         
-        local bagContents = {}
-        if(options.get('discount-summaries')) then
-            local bagContents = utility.getBagContents()
-        end
-        
         local reagentCosts = {}
-        
         local recipes = core.fetchRecipes(skillId or -1)
         
         for _, spellId in pairs(recipes) do
@@ -779,7 +790,7 @@ core = {
         
         local doReduction = true
         while doReduction do
-            reagentCosts, doReduction = core.reduceSummary(reagentCosts, bagContents)
+            reagentCosts, doReduction = core.reduceSummary(reagentCosts)
         end
 
         core.summary = {}
@@ -799,7 +810,7 @@ core = {
         
         core.renderSummary()
     end,
-    ['reduceSummary'] = function(reagents, bagContents)
+    ['reduceSummary'] = function(reagents)
         local didReduction = false
         local newReagents = {}
         local exclusions = lookup.summaryReductionExclusions
@@ -810,8 +821,7 @@ core = {
                 
                 if(spellId ~= nil) then
                     if(options.get('discount-summaries')) then
-                        local bankOwned = GetCustomGameData(13, itemId) or 0
-                        reagents[itemId] = reagents[itemId] - (bankOwned + (bagContents[itemId] or 0))
+                        reagents[itemId] = reagents[itemId] - ((GetCustomGameData(13, itemId) or 0) + (utility.getBagContents()[itemId] or 0))
                     end
                     
                     if(reagents[itemId] > 0) then
@@ -844,8 +854,7 @@ core = {
         elseif(options.get('discount-summaries')) then
             for itemId, _ in pairs(reagents) do
                 if(reagents[itemId] > 0) then
-                    local bankOwned = GetCustomGameData(13, itemId) or 0
-                    reagents[itemId] = reagents[itemId] - (bankOwned + (bagContents[itemId] or 0))
+                    reagents[itemId] = reagents[itemId] - ((GetCustomGameData(13, itemId) or 0) + (utility.getBagContents()[itemId] or 0))
                 end
             end
         end
@@ -995,10 +1004,6 @@ core = ScootsCraft.core
 frames.events:SetScript('OnEvent', core.eventHandler)
 
 frames.events:RegisterEvent('ADDON_LOADED')
-frames.events:RegisterEvent('PLAYER_LOGOUT')
-frames.events:RegisterEvent('SKILL_LINES_CHANGED')
-frames.events:RegisterEvent('MERCHANT_SHOW')
-frames.events:RegisterEvent('MERCHANT_CLOSED')
 
 function ScootsCraft_Core_Init()
     core.init()
