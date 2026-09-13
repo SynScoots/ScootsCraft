@@ -1,6 +1,6 @@
 ScootsCraft = {
     ['title'] = 'ScootsCraft',
-    ['version'] = '2.4.0',
+    ['version'] = '2.4.1',
     ['frames'] = {
         ['events'] = CreateFrame('Frame', 'ScootsCraft-EventsFrame', UIParent),
     },

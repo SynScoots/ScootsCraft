@@ -78,7 +78,7 @@ interface = {
         --
         
         frames.title = CreateFrame('Frame', 'ScootsCraft-Title', frames.front)
-        frames.title:SetSize(680, 21)
+        frames.title:SetSize(560, 21)
         frames.title:SetPoint('TOPLEFT', frames.front, 'TOPLEFT', 68, -11)
         frames.title:EnableMouse(true)
         frames.title:RegisterForDrag('LeftButton')
@@ -117,6 +117,25 @@ interface = {
         
         frames.optionsButton:SetScript('OnClick', function()
             options.open()
+        end)
+        
+        --
+        
+        frames.depositButton = CreateFrame('Button', 'ScootsCraft-DepositButton', frames.front, 'UIPanelButtonTemplate')
+        frames.depositButton:SetSize(120, 19)
+        frames.depositButton:SetPoint('TOPRIGHT', frames.optionsButton, 'TOPLEFT', 0, 0)
+        frames.depositButton:SetText('Deposit resources')
+        
+        frames.depositButton:SetScript('OnEnter', function(self)
+            GameTooltip:SetOwner(self, 'ANCHOR_CURSOR_RIGHT')
+            GameTooltip:SetText('Deposit all eligible items to the Resource Bank.', nil, nil, nil, nil, 1)
+            GameTooltip:Show()
+        end)
+        
+        frames.depositButton:SetScript('OnLeave', GameTooltip_Hide)
+        
+        frames.depositButton:SetScript('OnClick', function()
+            NotifyServer(2, 9, '')
         end)
         
         --
