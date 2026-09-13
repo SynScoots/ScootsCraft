@@ -13,9 +13,41 @@ options = {
         ['recipe-list-tooltip'] = 'none',
         ['select-next-on-hide'] = false,
         ['discount-summaries'] = true,
-        ['reduce-wotlk-cloth'] = false,
-        ['reduce-tbc-cloth'] = false,
-        ['reduce-primal-might'] = false,
+        ['summary-reduction-exceptions'] = {
+            [2840] = true,  -- Copper Bar
+            [2842] = true,  -- Silver Bar
+            [3575] = true,  -- Iron Bar
+            [3576] = true,  -- Tin Bar
+            [3577] = true,  -- Gold Bar
+            [3860] = true,  -- Mithril Bar
+            [6037] = true,  -- Truesilver Bar
+            [11371] = true, -- Dark Iron Bar
+            [12359] = true, -- Thorium Bar
+            [17771] = true, -- Elementium Bar
+            [23445] = true, -- Fel Iron Bar
+            [23446] = true, -- Adamantite Bar
+            [23447] = true, -- Eternium Bar
+            [23449] = true, -- Khorium Bar
+            [36913] = true, -- Saronite Bar
+            [36916] = true, -- Cobalt Bar
+            [41163] = true, -- Titanium Bar
+            
+            [2318] = true, -- Light Leather
+            [2319] = true, -- Medium Leather
+            [4234] = true, -- Heavy Leather
+            [4304] = true, -- Thick Leather
+            [8170] = true, -- Rugged Leather
+            [21887] = true, -- Knothide Leather
+            [33568] = true, -- Borean Leather
+            
+            [41593] = true, -- Ebonweave
+            [41594] = true, -- Moonshroud
+            [41595] = true, -- Spellweave
+            [24272] = true, -- Shadowcloth
+            [21845] = true, -- Primal Mooncloth
+            [24271] = true, -- Spellcloth
+            [23571] = true, -- Primal Might
+        },
     },
     ['defaultFiltersValues'] = {
         ['search'] = '',
@@ -75,12 +107,14 @@ options = {
         end
     end,
     ['get'] = function(key, sourceTable)
-        if(storage == nil or storage.options == nil) then
-            return nil
+        if(not sourceTable) then
+            if(storage and storage.options) then
+                sourceTable = storage.options
+            end
         end
         
-        if(sourceTable == nil) then
-            sourceTable = storage.options
+        if(not sourceTable) then
+            return nil
         end
         
         if(sourceTable[key] ~= nil) then
@@ -146,7 +180,7 @@ options = {
         for _, skill in ipairs(lookup.professionMap) do
             options.optionPageDefinitions[skill.skillId] = {
                 ['framename'] = skill.name,
-                ['title'] = skill.name,
+                ['title'] = skill.displayName,
                 ['description'] = string.format('Options only for the %s skill.', skill.name),
                 ['callback'] = function(data)
                     return options.defineSkillOptions(data, skill.skillId)
@@ -272,64 +306,118 @@ options = {
                 ['tooltip'] = 'With this option enabled, profession summaries have their counts reduced by reagents you already have.',
             },
             {
-                ['key'] = 'reduce-wotlk-cloth',
-                ['type'] = 'checkbox',
-                ['framename'] = 'ReduceWotlkCloth',
-                ['label'] = string.format(
-                    'Split %s, %s, and %s into components',
-                    (select(2, GetItemInfoCustom(41593))), -- Ebonweave
-                    (select(2, GetItemInfoCustom(41594))), -- Moonshroud
-                    (select(2, GetItemInfoCustom(41595)))  -- Spellweave
-                ),
-                ['callback'] = function(pageKey, fieldKey, value)
-                    local exclude
-                    if(not value) then
-                        exclude = true
-                    end
+                ['key'] = 'summary-reduction-exclusions',
+                ['type'] = 'group',
+                ['framename'] = 'SummaryReductionExclusions',
+                ['label'] = 'Summary Reduction Exclusions',
+                ['callback'] = function(group, header)
+                    group.description = group:CreateFontString(nil, 'OVERLAY', 'GameFontNormalSmall')
+                    group.description:SetPoint('TOPLEFT', header, 'BOTTOMLEFT', 0, -10)
+                    group.description:SetWidth(380)
+                    group.description:SetJustifyH('LEFT')
+                    group.description:SetWordWrap(true)
+                    group.description:SetText('Select which items should not be reduced to their component reagents when summarising professions.')
                     
-                    lookup.summaryReductionExclusions[41593] = exclude -- Ebonweave
-                    lookup.summaryReductionExclusions[41594] = exclude -- Moonshroud
-                    lookup.summaryReductionExclusions[41595] = exclude -- Spellweave
-                end,
-            },
-            {
-                ['key'] = 'reduce-tbc-cloth',
-                ['type'] = 'checkbox',
-                ['framename'] = 'ReduceTbcCloth',
-                ['label'] = string.format(
-                    'Split %s, %s, and %s into components',
-                    (select(2, GetItemInfoCustom(24272))), -- Shadowcloth
-                    (select(2, GetItemInfoCustom(21845))), -- Primal Mooncloth
-                    (select(2, GetItemInfoCustom(24271)))  -- Spellcloth
-                ),
-                ['callback'] = function(pageKey, fieldKey, value)
-                    local exclude
-                    if(not value) then
-                        exclude = true
-                    end
+                    local height = group.description:GetHeight()
                     
-                    lookup.summaryReductionExclusions[24272] = exclude -- Shadowcloth
-                    lookup.summaryReductionExclusions[21845] = exclude -- Primal Mooncloth
-                    lookup.summaryReductionExclusions[24271] = exclude -- Spellcloth
-                end,
-            },
-            {
-                ['key'] = 'reduce-primal-might',
-                ['type'] = 'checkbox',
-                ['framename'] = 'ReducePrimalMight',
-                ['label'] = string.format(
-                    'Split %s into components',
-                    (select(2, GetItemInfoCustom(23571))) -- Primal Might
-                ),
-                ['callback'] = function(pageKey, fieldKey, value)
-                    local exclude
-                    if(not value) then
-                        exclude = true
-                    end
+                    frames.options['summary-reduction-exclusions'] = {}
+                    local firstField, subHeight, xOffset, yOffset = ScootsLibOptions.core.processOptionsFieldList(frames.options, options.fieldKeys, {
+                        ['parentAddon'] = {
+                            ['framename'] = 'ScootsCraft-Options-SummaryReductionExclusions',
+                        },
+                        ['key'] = 'summary-reduction-exclusions',
+                        ['framename'] = group:GetName(),
+                        ['parent'] = group,
+                        ['callback'] = function()
+                            local fieldList = {}
+                            
+                            for _, skill in ipairs(lookup.professionMap) do
+                                if(lookup.getPossibleSummaryReductionExclusions()[skill.skillId]) then
+                                    table.insert(fieldList, {
+                                        ['key'] = 'summary-reduction-exclusions-' .. tostring(skill.skillId),
+                                        ['type'] = 'group',
+                                        ['framename'] = 'SummaryReductionExclusions-' .. skill.name,
+                                        ['label'] = skill.displayName,
+                                        ['width'] = 380,
+                                        ['collapsible'] = true,
+                                        ['collapsed'] = true,
+                                        ['collapseCallback'] = function()
+                                            group.cachedChildren = group.cachedChildren or {group:GetChildren()}
+                                            
+                                            local childHeight = 10 + header:GetHeight() + 10 + group.description:GetHeight()
+                                            
+                                            for _, child in ipairs(group.cachedChildren) do
+                                                childHeight = childHeight + 10 + child:GetHeight()
+                                            end
+                                            
+                                            group:SetHeight(childHeight + 10)
+                                            
+                                            local parent = group:GetParent()
+                                            
+                                            local parentHeight = 10
+                                            parentHeight = parentHeight + (parent.title and (parent.title:GetHeight() + 10) or 0)
+                                            parentHeight = parentHeight + (parent.description and (parent.description:GetHeight() + 10) or 0)
+                                            
+                                            parent.cachedChildren = parent.cachedChildren or {parent:GetChildren()}
+                                            
+                                            for _, child in ipairs(parent.cachedChildren) do
+                                                parentHeight = parentHeight + child:GetHeight() + 10
+                                            end
+                                            
+                                            parent:SetHeight(parentHeight)
+                                        end,
+                                        ['callback'] = function(group, header)
+                                            local firstField, subHeight, xOffset, yOffset = ScootsLibOptions.core.processOptionsFieldList(frames.options, options.fieldKeys, {
+                                                ['parentAddon'] = {
+                                                    ['framename'] = 'ScootsCraft-Options-SummaryReductionExclusions',
+                                                    ['optionGetCallback'] = function(fieldKey)
+                                                        return options.get('summary-reduction-exceptions')[fieldKey]
+                                                    end,
+                                                    ['optionChangeCallback'] = function(pageKey, fieldKey, value)
+                                                        local exclusions = options.get('summary-reduction-exceptions')
+                                                        exclusions[fieldKey] = value or nil
+                                                        options.set('summary-reduction-exceptions', exclusions)
+                                                        
+                                                        lookup.summaryReductionExclusions[fieldKey] = exclusions[fieldKey]
+                                                    end,
+                                                },
+                                                ['key'] = 'summary-reduction-exclusions',
+                                                ['framename'] = group:GetName(),
+                                                ['parent'] = group,
+                                                ['callback'] = function()
+                                                    local fieldList = {}
+                                                    
+                                                    for _, itemId in ipairs(lookup.getPossibleSummaryReductionExclusions()[skill.skillId]) do
+                                                        table.insert(fieldList, {
+                                                            ['key'] = itemId,
+                                                            ['type'] = 'checkbox',
+                                                            ['framename'] = group:GetName() .. '-' .. tostring(itemId),
+                                                            ['label'] = (select(2, GetItemInfoCustom(itemId))),
+                                                            ['itemTooltip'] = itemId,
+                                                        })
+                                                    end
+                                                    
+                                                    return fieldList
+                                                end,
+                                            })
+                                            
+                                            firstField:SetPoint('TOPLEFT', header, 'BOTTOMLEFT', xOffset or 0, 0 - (10 + (yOffset or 0)))
+                                            
+                                            return height + subHeight - 20
+                                        end,
+                                    })
+                                end
+                            end
+                            
+                            return fieldList
+                        end,
+                    })
                     
-                    lookup.summaryReductionExclusions[23571] = exclude -- Primal Might
+                    firstField:SetPoint('TOPLEFT', group.description, 'BOTTOMLEFT', xOffset or 0, 0 - (10 + (yOffset or 0)))
+                    
+                    return height + subHeight + 10
                 end,
-            },
+            }
         }
         
         for _, field in ipairs(fieldList) do
@@ -349,8 +437,6 @@ options = {
                     local firstField, subHeight, xOffset, yOffset = ScootsLibOptions.core.processOptionsFieldList(frames.options, options.fieldKeys, {
                         ['parentAddon'] = {
                             ['framename'] = 'ScootsCraft-Options-' .. lookup.professionMap[core.skillIndexMap[skillId]].name,
-                            ['title'] = ScootsCraft.title,
-                            ['version'] = ScootsCraft.version,
                             ['optionGetCallback'] = options.get,
                             ['optionChangeCallback'] = function(pageKey, fieldKey, value)
                                 options.set(fieldKey, value)

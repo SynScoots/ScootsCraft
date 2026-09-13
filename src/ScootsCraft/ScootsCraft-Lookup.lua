@@ -64,7 +64,226 @@ lookup = {
             ['possibleSpellIds'] = {45542, 27028, 10846, 7924, 3274, 3273}
         },
     },
+    ['getPossibleSummaryReductionExclusions'] = function()
+        if(not lookup.possibleSummaryReductionExclusions) then
+            lookup.possibleSummaryReductionExclusions = {
+                [core.skillMap.Alchemy] = {
+                    118, -- Minor Healing Potion
+                    929, -- Healing Potion
+                    2457, -- Elixir of Minor Agility
+                    2459, -- Swiftness Potion
+                    3383, -- Elixir of Wisdom
+                    3389, -- Elixir of Defense
+                    3390, -- Elixir of Lesser Agility
+                    3391, -- Elixir of Ogre's Strength
+                    3823, -- Lesser Invisibility Potion
+                    3824, -- Shadow Oil
+                    3827, -- Mana Potion
+                    3829, -- Frost Oil
+                    5633, -- Great Rage Potion
+                    6048, -- Shadow Protection Potion
+                    6149, -- Greater Mana Potion
+                    6370, -- Blackmouth Oil
+                    6371, -- Fire Oil
+                    7068, -- Elemental Fire
+                    8949, -- Elixir of Agility
+                    8951, -- Elixir of Greater Defense
+                    9061, -- Goblin Rocket Fuel
+                    9210, -- Ghost Dye
+                    9224, -- Elixir of Demonslaying
+                    10592, -- Catseye Elixir
+                    12360, -- Arcanite Bar
+                    13423, -- Stonescale Oil
+                    13444, -- Major Mana Potion
+                    13446, -- Major Healing Potion
+                    13510, -- Flask of the Titans
+                    13512, -- Flask of Supreme Power
+                    22824, -- Elixir of Major Strength
+                    22829, -- Super Healing Potion
+                    22831, -- Elixir of Major Agility
+                    22832, -- Super Mana Potion
+                    23571, -- Primal Might
+                    25867, -- Earthstorm Diamond
+                    25868, -- Skyfire Diamond
+                    33447, -- Runic Healing Potion
+                    33448, -- Runic Mana Potion
+                    36919, -- Cardinal Ruby
+                    36922, -- King's Amber
+                    36925, -- Majestic Zircon
+                    36928, -- Dreadstone
+                    36931, -- Ametrine
+                    36934, -- Eye of Zul
+                    40195, -- Pygmy Oil
+                    41266, -- Skyflare Diamond
+                    41334, -- Earthsiege Diamond
+                    44958, -- Ethereal Oil
+                },
+                [core.skillMap.Blacksmithing] = {
+                    3470, -- Rough Grinding Stone
+                    3478, -- Coarse Grinding Stone
+                    3486, -- Heavy Grinding Stone
+                    6338, -- Silver Rod
+                    7071, -- Iron Buckle
+                    7966, -- Solid Grinding Stone
+                    9060, -- Inlaid Mithril Cylinder
+                    11128, -- Golden Rod
+                    11144, -- Truesilver Rod
+                    12644, -- Dense Grinding Stone
+                    16206, -- Arcanite Rod
+                    25843, -- Fel Iron Rod
+                    25844, -- Adamantite Rod
+                    25845, -- Eternium Rod
+                    41745, -- Titanium Rod
+                },
+                [core.skillMap.Enchanting] = {
+                    12655, -- Enchanted Thorium Bar
+                    12810, -- Enchanted Leather
+                },
+                [core.skillMap.Engineering] = {
+                    4357, -- Rough Blasting Powder
+                    4359, -- Handful of Copper Bolts
+                    4361, -- Copper Tube
+                    4363, -- Copper Modulator
+                    4364, -- Coarse Blasting Powder
+                    4371, -- Bronze Tube
+                    4375, -- Whirring Bronze Gizmo
+                    4377, -- Heavy Blasting Powder
+                    4382, -- Bronze Framework
+                    4387, -- Iron Strut
+                    4389, -- Gyrochronatom
+                    4394, -- Big Iron Bomb
+                    4404, -- Silver Contact
+                    4407, -- Accurate Scope
+                    7191, -- Fused Wiring
+                    10505, -- Solid Blasting Powder
+                    10507, -- Solid Dynamite
+                    10546, -- Deadly Scope
+                    10558, -- Gold Power Core
+                    10559, -- Mithril Tube
+                    10560, -- Unstable Trigger
+                    10561, -- Mithril Casing
+                    10576, -- Mithril Mechanical Dragonling
+                    10577, -- Goblin Mortar
+                    15992, -- Dense Blasting Powder
+                    15994, -- Thorium Widget
+                    16000, -- Thorium Tube
+                    16006, -- Delicate Arcanite Converter
+                    18232, -- Field Repair Bot 74A
+                    18631, -- Truesilver Transformer
+                    23781, -- Elemental Blasting Powder
+                    23782, -- Fel Iron Casing
+                    23783, -- Handful of Fel Iron Bolts
+                    23784, -- Adamantite Frame
+                    23785, -- Hardened Adamantite Tube
+                    23786, -- Khorium Power Core
+                    23787, -- Felsteel Stabilizer
+                    32423, -- Icy Blasting Primers
+                    34113, -- Field Repair Bot 110G
+                    39681, -- Handful of Cobalt Bolts
+                    39682, -- Overcharged Capacitor
+                    39683, -- Froststeel Tube
+                    39690, -- Volatile Blasting Trigger
+                    40769, -- Scrapbot Construction Kit
+                    41146, -- Sun Scope
+                },
+                [core.skillMap.Inscription] = {
+                    27503, -- Scroll of Strength V
+                    37101, -- Ivory Ink
+                    39469, -- Moonglow Ink
+                    39774, -- Midnight Ink
+                    43115, -- Hunter's Ink
+                    43116, -- Lion's Ink
+                    43117, -- Dawnstar Ink
+                    43118, -- Jadefire Ink
+                    43119, -- Royal Ink
+                    43120, -- Celestial Ink
+                    43121, -- Fiery Ink
+                    43122, -- Shimmering Ink
+                    43123, -- Ink of the Sky
+                    43124, -- Ethereal Ink
+                    43125, -- Darkflame Ink
+                    43126, -- Ink of the Sea
+                    43127, -- Snowfall Ink
+                },
+                [core.skillMap.Jewelcrafting] = {
+                    20816, -- Delicate Copper Wire
+                    20817, -- Bronze Setting
+                    20963, -- Mithril Filigree
+                    21752, -- Thorium Setting
+                    31079, -- Mercurial Adamantite
+                },
+                [core.skillMap.Leatherworking] = {
+                    2318, -- Light Leather
+                    2319, -- Medium Leather
+                    4231, -- Cured Light Hide
+                    4233, -- Cured Medium Hide
+                    4234, -- Heavy Leather
+                    4236, -- Cured Heavy Hide
+                    4304, -- Thick Leather
+                    8170, -- Rugged Leather
+                    8172, -- Cured Thick Hide
+                    15407, -- Cured Rugged Hide
+                    21887, -- Knothide Leather
+                    23793, -- Heavy Knothide Leather
+                    33568, -- Borean Leather
+                    38425, -- Heavy Borean Leather
+                },
+                [core.skillMap.Smelting] = {
+                    2840, -- Copper Bar
+                    2841, -- Bronze Bar
+                    2842, -- Silver Bar
+                    3575, -- Iron Bar
+                    3576, -- Tin Bar
+                    3577, -- Gold Bar
+                    3859, -- Steel Bar
+                    3860, -- Mithril Bar
+                    6037, -- Truesilver Bar
+                    11371, -- Dark Iron Bar
+                    12359, -- Thorium Bar
+                    23445, -- Fel Iron Bar
+                    23446, -- Adamantite Bar
+                    23447, -- Eternium Bar
+                    23448, -- Felsteel Bar
+                    23449, -- Khorium Bar
+                    23573, -- Hardened Adamantite Bar
+                    35128, -- Hardened Khorium
+                    36913, -- Saronite Bar
+                    36916, -- Cobalt Bar
+                    37663, -- Titansteel Bar
+                    41163, -- Titanium Bar
+                },
+                [core.skillMap.Tailoring] = {
+                    2996, -- Bolt of Linen Cloth
+                    2997, -- Bolt of Woolen Cloth
+                    4305, -- Bolt of Silk Cloth
+                    4339, -- Bolt of Mageweave
+                    14048, -- Bolt of Runecloth
+                    14342, -- Mooncloth
+                    21840, -- Bolt of Netherweave
+                    21842, -- Bolt of Imbued Netherweave
+                    21844, -- Bolt of Soulcloth
+                    21845, -- Primal Mooncloth
+                    24271, -- Spellcloth
+                    24272, -- Shadowcloth
+                    41510, -- Bolt of Frostweave
+                    41511, -- Bolt of Imbued Frostweave
+                    41593, -- Ebonweave
+                    41594, -- Moonshroud
+                    41595, -- Spellweave
+                },
+            }
+            
+            for skillId, _ in pairs(lookup.possibleSummaryReductionExclusions) do
+                table.sort(lookup.possibleSummaryReductionExclusions[skillId], function(itemIdA, itemIdB)
+                    return (GetItemInfoCustom(itemIdA)) < (GetItemInfoCustom(itemIdB))
+                end)
+            end
+        end
+        
+        return lookup.possibleSummaryReductionExclusions
+    end,
     ['summaryReductionExclusions'] = {
+        -- These can't be options to prevent infinite loop
         [7076] = true,  -- Essence of Earth
         [7078] = true,  -- Essence of Fire
         [7080] = true,  -- Essence of Water
@@ -88,32 +307,6 @@ lookup = {
         [35625] = true, -- Eternal Life
         [25627] = true, -- Eternal Shadow
         [35622] = true, -- Eternal Water
-        
-        [2840] = true,  -- Copper Bar
-        [2842] = true,  -- Silver Bar
-        [3575] = true,  -- Iron Bar
-        [3576] = true,  -- Tin Bar
-        [3577] = true,  -- Gold Bar
-        [3860] = true,  -- Mithril Bar
-        [6037] = true,  -- Truesilver Bar
-        [11371] = true, -- Dark Iron Bar
-        [12359] = true, -- Thorium Bar
-        [17771] = true, -- Elementium Bar
-        [23445] = true, -- Fel Iron Bar
-        [23446] = true, -- Adamantite Bar
-        [23447] = true, -- Eternium Bar
-        [23449] = true, -- Khorium Bar
-        [36913] = true, -- Saronite Bar
-        [36916] = true, -- Cobalt Bar
-        [41163] = true, -- Titanium Bar
-        
-        [2318] = true, -- Light Leather
-        [2319] = true, -- Medium Leather
-        [4234] = true, -- Heavy Leather
-        [4304] = true, -- Thick Leather
-        [8170] = true, -- Rugged Leather
-        [21887] = true, -- Knothide Leather
-        [33568] = true, -- Borean Leather
     },
     ['itemInvSlots'] = {
         ['INVTYPE_HEAD'] = 1,

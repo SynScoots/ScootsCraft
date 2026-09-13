@@ -73,20 +73,8 @@ core = {
         options.build()
         interface.buildMinimapButton()
         
-        if(not options.get('reduce-wotlk-cloth')) then
-            lookup.summaryReductionExclusions[41593] = true -- Ebonweave
-            lookup.summaryReductionExclusions[41594] = true -- Moonshroud
-            lookup.summaryReductionExclusions[41595] = true -- Spellweave
-        end
-        
-        if(not options.get('reduce-tbc-cloth')) then
-            lookup.summaryReductionExclusions[24272] = true -- Shadowcloth
-            lookup.summaryReductionExclusions[21845] = true -- Primal Mooncloth
-            lookup.summaryReductionExclusions[24271] = true -- Spellcloth
-        end
-        
-        if(not options.get('reduce-primal-might')) then
-            lookup.summaryReductionExclusions[23571] = true -- Primal Might
+        for itemId, _ in pairs(options.get('summary-reduction-exceptions')) do
+            lookup.summaryReductionExclusions[itemId] = true
         end
         
         frames.events:SetScript('OnUpdate', core.updateLoop)
@@ -784,11 +772,7 @@ core = {
             local reagents = Custom_GetProfessionRecipeReagents(spellId)
             
             for itemId, itemCount in pairs(reagents) do
-                if(reagentCosts[itemId] == nil) then
-                    reagentCosts[itemId] = itemCount
-                else
-                    reagentCosts[itemId] = reagentCosts[itemId] + itemCount
-                end
+                reagentCosts[itemId] = (reagentCosts[itemId] or 0) + itemCount
             end
         end
         
