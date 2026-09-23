@@ -57,8 +57,11 @@ utility = {
     end,
     ['getCraftingLink'] = function(spellId)
         local skillId, spellName = Custom_GetProfessionRecipeInfo(spellId)
-
         return string.format('|cffffd000|Henchant:%d|h[%s: %s]|h|r', spellId, core.skills[core.skillIndexMap[skillId]].displayName, spellName)
+    end,
+    ['getSpellLink'] = function(spellId, noCraft)
+        local spellLink, craftingSpellLink = GetSpellLink(spellId)
+        return (not noCraft and craftingSpellLink) or spellLink
     end,
     ['getItemLink'] = function(itemId)
         return (select(2, GetItemInfoCustom(itemId)))
@@ -150,6 +153,25 @@ utility = {
         end
         
         return storage.tooltipCache[spellId]:match(string.lower(searchString)) ~= nil
+    end,
+    ['getCraftQuantity'] = function(spellId)
+        local craftedQuantity = select(4, Custom_GetProfessionRecipeInfo(spellId))
+        local _, minCraft, maxCraft = Custom_GetSpellEffect(spellId, 0)
+        
+        if(minCraft > 0 or maxCraft > 1) then
+            maxCraft = minCraft + maxCraft
+            minCraft = minCraft + 1
+        else
+            minCraft = craftedQuantity
+            maxCraft = craftedQuantity
+        end
+        
+        if(lookup.doubleMasteryMap[spellId] and IsSpellKnown(lookup.doubleMasteryMap[spellId])) then
+            minCraft = minCraft * 2
+            maxCraft = maxCraft * 2
+        end
+        
+        return minCraft, maxCraft
     end,
 }
 

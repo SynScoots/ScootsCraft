@@ -604,7 +604,7 @@ core = {
         frames.craftItem:Show()
         frames.createButton:Enable()
 
-        local skillId, spellName, createdItemId, craftedItemCount, canCraftTimesNow, altVerb = Custom_GetProfessionRecipeInfo(spellId)
+        local skillId, spellName, createdItemId, _, canCraftTimesNow, altVerb = Custom_GetProfessionRecipeInfo(spellId)
         local height = 0
         
         --
@@ -628,22 +628,13 @@ core = {
         frames.craftIcon.spellId = spellId
         height = height + frames.craftIcon:GetHeight() + 4
         
-        local _, minCraft, maxCraft = Custom_GetSpellEffect(spellId, 0)
-        if(minCraft > 0 or maxCraft > 1) then
-            maxCraft = minCraft + maxCraft
-            minCraft = minCraft + 1
-            
-            if(maxCraft > minCraft) then
-                frames.craftIcon.text:SetText(string.format('%d-%d', minCraft, maxCraft))
-            else
-                frames.craftIcon.text:SetText(minCraft)
-            end
+        local minCraft, maxCraft = utility.getCraftQuantity(spellId)
+        if(minCraft == 1 and maxCraft == 1) then
+            frames.craftIcon.text:SetText('')
+        elseif(minCraft == maxCraft) then
+            frames.craftIcon.text:SetText(minCraft)
         else
-            if(craftedItemCount > 1) then
-                frames.craftIcon.text:SetText(craftedItemCount)
-            else
-                frames.craftIcon.text:SetText('')
-            end
+            frames.craftIcon.text:SetText(string.format('%d-%d', minCraft, maxCraft))
         end
         
         --
@@ -685,6 +676,7 @@ core = {
         --
         
         local reagents = utility.getRecipeReagents(spellId)
+        local visibleReagentIndex
         
         for reagentIndex = 1, 8 do
             local reagent = reagents[reagentIndex]
@@ -701,6 +693,7 @@ core = {
                 end
                 
                 frames.reagents[reagentIndex]:Show()
+                visibleReagentIndex = reagentIndex
                 SetItemButtonTexture(frames.reagents[reagentIndex], GetItemIcon(reagent.itemId))
                 _G[frames.reagents[reagentIndex]:GetName() .. 'Name']:SetText((select(1, GetItemInfoCustom(reagent.itemId))))
                 frames.reagents[reagentIndex].itemId = reagent.itemId
@@ -719,6 +712,23 @@ core = {
                 end
                 _G[frames.reagents[reagentIndex]:GetName() .. 'Count']:SetText(reagentOwnedText .. ' /' .. tostring(reagent.required))
             end
+        end
+        
+        if(not lookup.masteryMap[spellId] or IsSpellKnown(lookup.masteryMap[spellId])) then
+            frames.masteryWarning:Hide()
+        else
+            frames.masteryWarning:Show()
+            frames.masteryWarning.text:SetText(string.format('You have not learned %s!', utility.getSpellLink(lookup.masteryMap[spellId])))
+            frames.masteryWarning:SetHeight(frames.masteryWarning.text:GetHeight())
+            frames.masteryWarning.id = lookup.masteryMap[spellId]
+            
+            if(not visibleReagentIndex) then
+                frames.masteryWarning:SetPoint('TOPLEFT', frames.craftItem.description, 'BOTTOMLEFT', 0, -10)
+            else
+                frames.masteryWarning:SetPoint('TOPLEFT', frames.reagents[visibleReagentIndex - ((visibleReagentIndex - 1) % 2)], 'BOTTOMLEFT', 0, -10)
+            end
+            
+            height = height + frames.masteryWarning:GetHeight() + 10
         end
         
         --
@@ -815,13 +825,15 @@ core = {
                     if(reagents[itemId] > 0) then
                         didReduction = true
                         
+                        local craftedQuantity = utility.getCraftQuantity(spellId)
                         local subReagents = Custom_GetProfessionRecipeReagents(spellId)
+                        local requiredCrafts = math.ceil(reagents[itemId] / craftedQuantity)
                         
                         for subItemId, subItemCount in pairs(subReagents) do
                             if(newReagents[subItemId] == nil) then
-                                newReagents[subItemId] = (subItemCount * reagents[itemId])
+                                newReagents[subItemId] = (subItemCount * requiredCrafts)
                             else
-                                newReagents[subItemId] = newReagents[subItemId] + (subItemCount * reagents[itemId])
+                                newReagents[subItemId] = newReagents[subItemId] + (subItemCount * requiredCrafts)
                             end
                         end
                         

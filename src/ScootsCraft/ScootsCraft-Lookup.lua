@@ -343,6 +343,83 @@ lookup = {
         'section',
         'inv-slot',
     },
+    ['masteries'] = {
+        [28672] = { -- Transmutation Master
+            11479, -- Transmute: Iron to Gold
+            11480, -- Transmute: Mithril to Truesilver
+            17187, -- Transmute: Arcanite
+            17559, -- Transmute: Air to Fire
+            17560, -- Transmute: Fire to Earth
+            17561, -- Transmute: Earth to Water
+            17562, -- Transmute: Water to Air
+            17563, -- Transmute: Undeath to Water
+            17564, -- Transmute: Water to Undeath
+            17565, -- Transmute: Life to Earth
+            17566, -- Transmute: Earth to Life
+            25146, -- Transmute: Elemental Fire
+            28566, -- Transmute: Primal Air to Fire
+            28567, -- Transmute: Primal Earth to Water
+            28568, -- Transmute: Primal Fire to Earth
+            28569, -- Transmute: Primal Water to Air
+            28580, -- Transmute: Primal Shadow to Water
+            28581, -- Transmute: Primal Water to Shadow
+            28582, -- Transmute: Primal Mana to Fire
+            28583, -- Transmute: Primal Fire to Mana
+            28584, -- Transmute: Primal Life to Earth
+            28585, -- Transmute: Primal Earth to Life
+            28664, -- Transmute - Primal Shadow to Water
+            28665, -- Transmute - Primal Water to Shadow
+            28666, -- Transmute - Primal Mana to Fire
+            28667, -- Transmute - Primal Fire to Mana
+            28668, -- Transmute - Primal Life to Earth
+            28669, -- Transmute - Primal Earth to Life
+            29688, -- Transmute: Primal Might
+            32765, -- Transmute: Earthstorm Diamond
+            32766, -- Transmute: Skyfire Diamond
+            53771, -- Transmute: Eternal Life to Shadow
+            53773, -- Transmute: Eternal Life to Fire
+            53774, -- Transmute: Eternal Fire to Water
+            53775, -- Transmute: Eternal Fire to Life
+            53776, -- Transmute: Eternal Air to Water
+            53777, -- Transmute: Eternal Air to Earth
+            53779, -- Transmute: Eternal Shadow to Earth
+            53780, -- Transmute: Eternal Shadow to Life
+            53781, -- Transmute: Eternal Earth to Air
+            53782, -- Transmute: Eternal Earth to Shadow
+            53783, -- Transmute: Eternal Water to Air
+            53784, -- Transmute: Eternal Water to Fire
+            54020, -- Transmute: Eternal Might
+            57425, -- Transmute: Skyflare Diamond
+            57427, -- Transmute: Earthsiege Diamond
+            60350, -- Transmute: Titanium
+            66658, -- Transmute: Ametrine
+            66659, -- Transmute: Cardinal Ruby
+            66660, -- Transmute: King's Amber
+            66662, -- Transmute: Dreadstone
+            66663, -- Transmute: Majestic Zircon
+            66664, -- Transmute: Eye of Zul
+            66887, -- Transmute: Cardinal Ruby
+            66888, -- Transmute: Majestic Zircon
+            66890, -- Transmute: Dreadstone
+            66891, -- Transmute: Ametrine
+            66892, -- Transmute: King's Amber
+        },
+    },
+    ['doubleMasteries'] = {
+        [26797] = { -- Spellfire Tailoring
+            31373, -- Spellcloth
+            56003, -- Spellweave
+        },
+        [26798] = { -- Mooncloth Tailoring
+            18560, -- Mooncloth
+            26751, -- Primal Mooncloth
+            56001, -- Moonshroud
+        },
+        [26801] = { -- Shadoweave Tailoring
+            36686, -- Shadowcloth
+            56002, -- Ebonweave
+        },
+    },
     ['getSectionRewrites'] = function()
         if(lookup.sectionRewrites == nil) then
             lookup.sectionRewrites = {
@@ -512,6 +589,21 @@ lookup = {
         return lookup.spellSectionRewrites
     end,
 }
+
+lookup.masteryMap = {}
+for masterySpellId, craftSpellIdList in pairs(lookup.masteries) do
+    for _, craftSpellId in ipairs(craftSpellIdList) do
+        lookup.masteryMap[craftSpellId] = masterySpellId
+    end
+end
+
+lookup.doubleMasteryMap = {}
+for masterySpellId, craftSpellIdList in pairs(lookup.doubleMasteries) do
+    for _, craftSpellId in ipairs(craftSpellIdList) do
+        lookup.masteryMap[craftSpellId] = masterySpellId
+        lookup.doubleMasteryMap[craftSpellId] = masterySpellId
+    end
+end
 
 for funcName, func in pairs(lookup) do
     ScootsCraft.lookup[funcName] = func

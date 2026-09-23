@@ -110,7 +110,7 @@ interface = {
         
         --
         
-        frames.optionsButton = CreateFrame('Button', 'ScootsCraft-OptionsButton', frames.front, 'UIPanelButtonTemplate')
+        frames.optionsButton = CreateFrame('Button', 'ScootsCraft-OptionsButton', frames.front, 'UIPanelButtonTemplate2')
         frames.optionsButton:SetSize(64, 19)
         frames.optionsButton:SetPoint('TOPLEFT', frames.front, 'TOPLEFT', 749, -12)
         frames.optionsButton:SetText('Options')
@@ -121,7 +121,7 @@ interface = {
         
         --
         
-        frames.depositButton = CreateFrame('Button', 'ScootsCraft-DepositButton', frames.front, 'UIPanelButtonTemplate')
+        frames.depositButton = CreateFrame('Button', 'ScootsCraft-DepositButton', frames.front, 'UIPanelButtonTemplate2')
         frames.depositButton:SetSize(120, 19)
         frames.depositButton:SetPoint('TOPRIGHT', frames.optionsButton, 'TOPLEFT', 0, 0)
         frames.depositButton:SetText('Deposit resources')
@@ -145,7 +145,7 @@ interface = {
         frames.closeButton:SetScript('OnClick', interface.toggle)
     end,
     ['buildFooterLeft'] = function()
-        frames.summariseButton = CreateFrame('Button', 'ScootsCraft-SummariseButton', frames.front, 'UIPanelButtonTemplate')
+        frames.summariseButton = CreateFrame('Button', 'ScootsCraft-SummariseButton', frames.front, 'UIPanelButtonTemplate2')
         frames.summariseButton:SetSize(80, 19)
         frames.summariseButton:SetPoint('TOPLEFT', frames.front, 'TOPLEFT', 16, -410)
         frames.summariseButton:SetText('Summarise')
@@ -176,7 +176,7 @@ interface = {
         
         --
         
-        frames.summariseAllButton = CreateFrame('Button', 'ScootsCraft-SummariseButton', frames.front, 'UIPanelButtonTemplate')
+        frames.summariseAllButton = CreateFrame('Button', 'ScootsCraft-SummariseAllButton', frames.front, 'UIPanelButtonTemplate2')
         frames.summariseAllButton:SetSize(26, 19)
         frames.summariseAllButton:SetPoint('TOPLEFT', frames.summariseButton, 'TOPRIGHT', 2, 0)
         frames.summariseAllButton:SetText('All')
@@ -228,7 +228,7 @@ interface = {
         frames.toggleAllSections.label:SetText('All')
     end,
     ['buildFooterRight'] = function()
-        frames.createButton = CreateFrame('Button', 'ScootsCraft-CreateButton', frames.front, 'UIPanelButtonTemplate')
+        frames.createButton = CreateFrame('Button', 'ScootsCraft-CreateButton', frames.front, 'UIPanelButtonTemplate2')
         frames.createButton:SetSize(80, 19)
         frames.createButton:SetPoint('TOPLEFT', frames.front, 'TOPLEFT', 750, -410)
         frames.createButton:SetText('Create')
@@ -328,7 +328,7 @@ interface = {
         
         --
         
-        frames.createAllButton = CreateFrame('Button', 'ScootsCraft-CreateButton', frames.front, 'UIPanelButtonTemplate')
+        frames.createAllButton = CreateFrame('Button', 'ScootsCraft-CreateAllButton', frames.front, 'UIPanelButtonTemplate2')
         frames.createAllButton:SetSize(80, 19)
         frames.createAllButton:SetPoint('TOPRIGHT', frames.decrement, 'TOPLEFT', -1, 0)
         frames.createAllButton:SetText('Create all')
@@ -731,6 +731,38 @@ interface = {
                 end
             end)
         end
+        
+        frames.masteryWarning = CreateFrame('Button', 'ScootsCraft-CraftItem-MasteryWarning', frames.craftItem)
+        frames.masteryWarning:SetWidth(frames.craftItem:GetWidth())
+        frames.masteryWarning:EnableMouse(true)
+        
+        frames.masteryWarning.text = frames.masteryWarning:CreateFontString(nil, 'ARTWORK', 'GameFontHighlightSmall')
+        frames.masteryWarning.text:SetPoint('TOPLEFT', 0, 0)
+        frames.masteryWarning.text:SetWidth(frames.craftItem:GetWidth())
+        frames.masteryWarning.text:SetJustifyH('LEFT')
+        frames.masteryWarning.text:SetTextColor(1, 0, 0)
+        
+        frames.masteryWarning:SetScript('OnClick', function(self)
+            if(IsModifierKeyDown()) then
+                local link = utility.getSpellLink(self.id)
+                
+                if(link) then
+                    HandleModifiedItemClick(link)
+                end
+            end
+        end)
+        
+        frames.masteryWarning:SetScript('OnEnter', function(self)
+            local link = utility.getSpellLink(self.id, true)
+            
+            if(link) then
+                GameTooltip:SetOwner(self, 'ANCHOR_CURSOR_RIGHT')
+                GameTooltip:SetHyperlink(link)
+                GameTooltip:Show()
+            end
+        end)
+        
+        frames.masteryWarning:SetScript('OnLeave', GameTooltip_Hide)
     end,
     ['buildSummaryPane'] = function()
         frames.summaryFrame = CreateFrame('ScrollFrame', 'ScootsCraft-SummaryFrame', frames.front, 'FauxScrollFrameTemplate')

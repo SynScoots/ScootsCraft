@@ -14,6 +14,8 @@ options = {
         ['select-next-on-hide'] = false,
         ['discount-summaries'] = true,
         ['summary-reduction-exceptions'] = {
+            [23571] = true, -- Primal Might
+            
             [2840] = true,  -- Copper Bar
             [2842] = true,  -- Silver Bar
             [3575] = true,  -- Iron Bar
@@ -46,7 +48,6 @@ options = {
             [24272] = true, -- Shadowcloth
             [21845] = true, -- Primal Mooncloth
             [24271] = true, -- Spellcloth
-            [23571] = true, -- Primal Might
         },
     },
     ['defaultFiltersValues'] = {
